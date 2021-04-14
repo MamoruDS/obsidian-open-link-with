@@ -1,14 +1,14 @@
 {
-    "name": "obsidian-sample-plugin",
+    "name": "obsidian-open-link-with",
     "version": "0.1.0",
-    "description": "This is a sample plugin for Obsidian (https://obsidian.md)",
-    "main": "main.js",
+    "description": "Open external link with specific browser in Obsidian",
+    "main": "dist/main.js",
     "scripts": {
         "dev": "rollup --config rollup.config.js -w",
         "build": "rollup --config rollup.config.js --environment BUILD:production"
     },
     "keywords": [],
-    "author": "",
+    "author": "MamoruDS",
     "license": "MIT",
     "devDependencies": {
         "@rollup/plugin-commonjs": "^18.0.0",
