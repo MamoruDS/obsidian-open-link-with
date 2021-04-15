@@ -6,7 +6,7 @@ Open external link with specific browser in Obsidian
 
 ### Manual installation
 
-Download zip archive from releases page. Extract the archive into `<your vault>/.obsidian/plugins`
+Download zip archive from [releases page](https://github.com/MamoruDS/obsidian-open-link-with/releases). Extract the archive into `<your vault>/.obsidian/plugins`
 Enable `Open Link With` under `Settings > Community plugins > Installed Plugins`
 
 ## Usage

@@ -5,5 +5,5 @@
     "description": "Open external link with specific browser in Obsidian",
     "author": "MamoruDS",
     "authorUrl": "https://github.com/MamoruDS",
-    "isDesktopOnly": false
+    "isDesktopOnly": true
 }
