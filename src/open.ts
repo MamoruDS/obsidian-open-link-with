@@ -37,11 +37,13 @@ class Browser implements _Browser {
     }
 }
 
-const openWith = (url: string, cmd: string[]) => {
-    const _spawn = (args: string[]) => {
-        spawnSync(args[0], args.slice(1), {
-            ...{ stdio: 'ignore' },
-        })
+const openWith = (url: string, cmd: string[]): boolean => {
+    const _spawn = (args: string[]): boolean => {
+        return (
+            typeof spawnSync(args[0], args.slice(1), {
+                ...{ stdio: 'ignore', shell: true },
+            }).error == 'undefined'
+        )
     }
     const t = '$TARGET_URL'
     let c = [...cmd]
@@ -60,7 +62,7 @@ const openWith = (url: string, cmd: string[]) => {
         }
     })
     if (!m) c.push(url)
-    _spawn(c)
+    return _spawn(c)
 }
 
 const getPresetBrowser = (): Browser[] => {

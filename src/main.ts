@@ -40,17 +40,16 @@ export default class MyPlugin extends Plugin {
                     const url = ele.getAttribute('href')
                     const cur = this.settings.selected
                     if (cur != DEFAULT_OPEN_WITH) {
-                        evt.preventDefault()
-                        openWith(url, this.profiles[cur])
+                        if (
+                            openWith(
+                                url,
+                                this.profiles[cur]
+                            )
+                        )
+                            evt.preventDefault()
                     }
                 }
             }
-        )
-        this.registerInterval(
-            window.setInterval(
-                () => console.log('setInterval'),
-                5 * 60 * 1000
-            )
         )
     }
     async loadSettings() {
@@ -122,8 +121,8 @@ class SettingTab extends PluginSettingTab {
                 })
             })
         new Setting(containerEl)
-            .setName('Profiles')
-            .setDesc('Profiles in JSON')
+            .setName('Customization')
+            .setDesc('Customization profiles in JSON')
             .addText((text) =>
                 text
                     .setPlaceholder('{}')
@@ -152,7 +151,9 @@ class SettingTab extends PluginSettingTab {
                                     this._render()
                                 } catch (e) {
                                     this.panic(
-                                        'JSON parse failed'
+                                        e.message ??
+                                            e.toString() ??
+                                            'some error occurred in open-link-with'
                                     )
                                 }
                             }
