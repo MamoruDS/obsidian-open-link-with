@@ -19,7 +19,8 @@ Select which browser you want to open external link with in plugin's setting men
 
 ### Customization
 
-Put your custom profile in plugin's setting menu
+Put your custom profile in plugin's setting menu. Profile should contain `name(string): commands(string[])` which is demonstrated in the following:
+_PS._ If the name in the user defined profile is same as the preset, it will be _ignored_.
 
 ```json
 {
@@ -32,3 +33,7 @@ Put your custom profile in plugin's setting menu
     ]
 }
 ```
+
+## Changelog
+
+[link](./CHANGELOG.md) of changelogs.

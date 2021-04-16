@@ -1,7 +1,7 @@
 {
     "id": "obsidian-open-link-with",
     "name": "Open Link With",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "description": "Open external link with specific browser in Obsidian",
     "author": "MamoruDS",
     "authorUrl": "https://github.com/MamoruDS",
