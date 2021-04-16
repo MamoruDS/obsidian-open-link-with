@@ -90,6 +90,9 @@ const getPresetBrowser = (): Browser[] => {
         new Browser('chrome', PRESET_BROWSERS['chrome'])
     )
     presets.push(
+        new Browser('chromium', PRESET_BROWSERS['chromium'])
+    )
+    presets.push(
         new Browser('edge', PRESET_BROWSERS['edge'])
     )
     return presets

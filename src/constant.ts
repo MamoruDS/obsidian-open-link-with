@@ -120,6 +120,37 @@ const PRESET_BROWSERS = {
             },
         },
     },
+    chromium: {
+        darwin: {
+            cmd: path.join(
+                '/Applications',
+                'Chromium.app',
+                'Contents',
+                'MacOS',
+                'Chromium'
+            ),
+            optional: {
+                private: {
+                    args: ['-incognito'],
+                },
+            },
+            test: async (b) => {
+                return existsSync(b.cmd)
+            },
+        },
+        linux: {
+            cmd: 'chromium-browser',
+            optional: {
+                private: {
+                    args: ['-incognito'],
+                },
+            },
+            test: async (b) => {
+                const c = spawnSync('which', [b.cmd])
+                return c.status == 0
+            },
+        },
+    },
     edge: {
         darwin: {
             cmd: path.join(
