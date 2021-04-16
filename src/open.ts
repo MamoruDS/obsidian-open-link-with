@@ -91,7 +91,6 @@ export const getValidBrowser = async (): Promise<
     browser.forEach(async ({ profiles, name }) => {
         let { ...b } = profiles[os]
         if (b.test && (await b.test(b))) {
-            console.log(b)
             for (const pvt of [0, 1]) {
                 const cmds = []
                 if (pvt) {
