@@ -1,4 +1,4 @@
-import { spawn, spawnSync } from 'child_process'
+import { spawn } from 'child_process'
 import * as process from 'process'
 
 import {
@@ -52,10 +52,11 @@ const openWith = async (
             })
             s.on('exit', (code) => {
                 failed = code == 0 ? false : true
+                res(!failed)
             })
             setTimeout(() => {
-                res(failed)
-            }, 100)
+                res(!failed)
+            }, 200)
         })
     }
     const t = '$TARGET_URL'

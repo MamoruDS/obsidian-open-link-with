@@ -40,13 +40,15 @@ export default class MyPlugin extends Plugin {
                     const url = ele.getAttribute('href')
                     const cur = this.settings.selected
                     if (cur != DEFAULT_OPEN_WITH) {
+                        evt.preventDefault()
                         if (
-                            await openWith(
+                            !(await openWith(
                                 url,
                                 this.profiles[cur]
-                            )
-                        )
-                            evt.preventDefault()
+                            ))
+                        ) {
+                            open(url)
+                        }
                     }
                 }
             }
