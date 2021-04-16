@@ -34,14 +34,14 @@ export default class MyPlugin extends Plugin {
         this.registerDomEvent(
             document,
             'click',
-            (evt: MouseEvent) => {
+            async (evt: MouseEvent) => {
                 const ele = evt.target as Element
                 if (ele.className == 'external-link') {
                     const url = ele.getAttribute('href')
                     const cur = this.settings.selected
                     if (cur != DEFAULT_OPEN_WITH) {
                         if (
-                            openWith(
+                            await openWith(
                                 url,
                                 this.profiles[cur]
                             )

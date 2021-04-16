@@ -1,4 +1,4 @@
-import { spawnSync } from 'child_process'
+import { spawn, spawnSync } from 'child_process'
 import * as process from 'process'
 
 import {
@@ -37,13 +37,26 @@ class Browser implements _Browser {
     }
 }
 
-const openWith = (url: string, cmd: string[]): boolean => {
-    const _spawn = (args: string[]): boolean => {
-        return (
-            typeof spawnSync(args[0], args.slice(1), {
-                ...{ stdio: 'ignore', shell: true },
-            }).error == 'undefined'
-        )
+const openWith = async (
+    url: string,
+    cmd: string[]
+): Promise<boolean> => {
+    const _spawn = async (
+        args: string[]
+    ): Promise<boolean> => {
+        return new Promise((res) => {
+            let failed = false
+            const s = spawn(args[0], args.slice(1), {
+                stdio: 'ignore',
+                shell: true,
+            })
+            s.on('exit', (code) => {
+                failed = code == 0 ? false : true
+            })
+            setTimeout(() => {
+                res(failed)
+            }, 100)
+        })
     }
     const t = '$TARGET_URL'
     let c = [...cmd]
@@ -62,7 +75,7 @@ const openWith = (url: string, cmd: string[]): boolean => {
         }
     })
     if (!m) c.push(url)
-    return _spawn(c)
+    return await _spawn(c)
 }
 
 const getPresetBrowser = (): Browser[] => {
