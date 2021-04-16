@@ -50,8 +50,8 @@ const PRESET_BROWSERS = {
                 },
             },
             test: async (b) => {
-                const c = spawnSync('whereis', [b.cmd])
-                return Boolean(c.stdout)
+                const c = spawnSync('which', [b.cmd])
+                return c.status == 0
             },
         },
         win32: {
@@ -97,8 +97,8 @@ const PRESET_BROWSERS = {
                 },
             },
             test: async (b) => {
-                const c = spawnSync('whereis', [b.cmd])
-                return Boolean(c.stdout)
+                const c = spawnSync('which', [b.cmd])
+                return c.status == 0
             },
         },
         win32: {
