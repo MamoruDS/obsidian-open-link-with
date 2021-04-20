@@ -1,5 +1,7 @@
 import {
     App,
+    debounce,
+    Debouncer,
     Modal,
     Plugin,
     PluginSettingTab,
@@ -10,21 +12,21 @@ import { openWith, getValidBrowser } from './open'
 
 interface PluginSettings {
     selected: string
-    profiles: Record<string, string[]>
+    custom: Record<string, string[]>
 }
 
 const DEFAULT_SETTINGS: PluginSettings = {
     selected: DEFAULT_OPEN_WITH,
-    profiles: {},
+    custom: {},
 }
 
-export default class MyPlugin extends Plugin {
+export default class OpenLinkPlugin extends Plugin {
     settings: PluginSettings
     presetProfiles: Record<string, string[]>
     get profiles(): Record<string, string[]> {
         return {
             ...this.presetProfiles,
-            ...this.settings.profiles,
+            ...this.settings.custom,
         }
     }
     async onload() {
@@ -36,10 +38,10 @@ export default class MyPlugin extends Plugin {
             'click',
             async (evt: MouseEvent) => {
                 const ele = evt.target as Element
-                if (ele.className == 'external-link') {
+                if (ele.className === 'external-link') {
                     const url = ele.getAttribute('href')
                     const cur = this.settings.selected
-                    if (cur != DEFAULT_OPEN_WITH) {
+                    if (cur !== DEFAULT_OPEN_WITH) {
                         evt.preventDefault()
                         if (
                             !(await openWith(
@@ -83,11 +85,29 @@ class PanicModal extends Modal {
 }
 
 class SettingTab extends PluginSettingTab {
-    plugin: MyPlugin
-    _check: string
-    constructor(app: App, plugin: MyPlugin) {
+    plugin: OpenLinkPlugin
+    _profileChangeHandler: Debouncer<string[]>
+    constructor(app: App, plugin: OpenLinkPlugin) {
         super(app, plugin)
         this.plugin = plugin
+        this._profileChangeHandler = debounce(
+            async (val) => {
+                try {
+                    const profiles = JSON.parse(val)
+                    this.plugin.settings.custom = profiles
+                    await this.plugin.saveSettings()
+                    this._render()
+                } catch (e) {
+                    this.panic(
+                        e.message ??
+                            e.toString() ??
+                            'some error occurred in open-link-with'
+                    )
+                }
+            },
+            1500,
+            true
+        )
     }
     panic(msg: string) {
         new PanicModal(this.app, msg).open()
@@ -104,7 +124,7 @@ class SettingTab extends PluginSettingTab {
                 const profiles = this.plugin.profiles
                 let _match = false
                 for (const p of Object.keys(profiles)) {
-                    if (p == cur) {
+                    if (p === cur) {
                         _match = true
                         items.unshift(p)
                     } else {
@@ -130,37 +150,12 @@ class SettingTab extends PluginSettingTab {
                     .setPlaceholder('{}')
                     .setValue(
                         JSON.stringify(
-                            this.plugin.settings.profiles,
+                            this.plugin.settings.custom,
                             null,
                             4
                         )
                     )
-                    .onChange(async (v) => {
-                        const ck = Math.floor(
-                            Math.random() * 100000
-                        ).toString(16)
-                        this._check = ck
-                        setTimeout(async () => {
-                            if (this._check == ck) {
-                                let profiles: Record<
-                                    string,
-                                    string[]
-                                > = {}
-                                try {
-                                    profiles = JSON.parse(v)
-                                    this.plugin.settings.profiles = profiles
-                                    await this.plugin.saveSettings()
-                                    this._render()
-                                } catch (e) {
-                                    this.panic(
-                                        e.message ??
-                                            e.toString() ??
-                                            'some error occurred in open-link-with'
-                                    )
-                                }
-                            }
-                        }, 1500)
-                    })
+                    .onChange(this._profileChangeHandler)
             )
     }
     display(): void {

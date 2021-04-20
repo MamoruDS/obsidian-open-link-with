@@ -2,13 +2,7 @@ import { spawnSync } from 'child_process'
 import { existsSync } from 'fs'
 import * as path from 'path'
 
-import { BrowserProfile, OS } from './types'
-
-const VALID_OS = {
-    darwin: true,
-    linux: true,
-    win32: true,
-}
+import { BrowserProfile } from './types'
 
 const DEFAULT_OPEN_WITH = 'system-default'
 
@@ -51,7 +45,7 @@ const PRESET_BROWSERS = {
             },
             test: async (b) => {
                 const c = spawnSync('which', [b.cmd])
-                return c.status == 0
+                return c.status === 0
             },
         },
         win32: {
@@ -98,7 +92,7 @@ const PRESET_BROWSERS = {
             },
             test: async (b) => {
                 const c = spawnSync('which', [b.cmd])
-                return c.status == 0
+                return c.status === 0
             },
         },
         win32: {
@@ -147,7 +141,7 @@ const PRESET_BROWSERS = {
             },
             test: async (b) => {
                 const c = spawnSync('which', [b.cmd])
-                return c.status == 0
+                return c.status === 0
             },
         },
     },
@@ -188,6 +182,9 @@ const PRESET_BROWSERS = {
             },
         },
     },
-} as Record<string, Partial<Record<OS, BrowserProfile>>>
+} as Record<
+    string,
+    Partial<Record<NodeJS.Platform, BrowserProfile>>
+>
 
-export { VALID_OS, DEFAULT_OPEN_WITH, PRESET_BROWSERS }
+export { DEFAULT_OPEN_WITH, PRESET_BROWSERS }
