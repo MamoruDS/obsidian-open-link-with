@@ -1,7 +1,3 @@
-import { VALID_OS } from './constant'
-
-type OS = keyof typeof VALID_OS
-
 interface BrowserOptions {
     private: Partial<Omit<BrowserProfile, 'optional'>>
     background: boolean
@@ -18,7 +14,9 @@ interface BrowserProfile {
 
 interface Browser {
     name: string
-    profiles: Partial<Record<OS, BrowserProfile>>
+    profiles: Partial<
+        Record<NodeJS.Platform, BrowserProfile>
+    >
 }
 
-export { OS, Browser, BrowserOptions, BrowserProfile }
+export { Browser, BrowserOptions, BrowserProfile }

@@ -13,7 +13,7 @@ export default {
         format: 'cjs',
         exports: 'default',
     },
-    external: ['obsidian', 'child_process', 'fs', 'path', 'process'],
+    external: ['obsidian', 'child_process', 'fs', 'path', 'os'],
     plugins: [
         typescript(),
         nodeResolve({ browser: true }),

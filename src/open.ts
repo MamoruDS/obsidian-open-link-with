@@ -1,22 +1,11 @@
 import { spawn } from 'child_process'
-import * as process from 'process'
+import { platform } from 'os'
 
 import {
-    OS,
     Browser as _Browser,
     BrowserProfile,
 } from './types'
-import { VALID_OS, PRESET_BROWSERS } from './constant'
-
-export const getOS = <O extends string>(): O => {
-    const p = process.platform as O
-    let _valid = false
-    Object.entries(VALID_OS).forEach(([o, v]) => {
-        if (p == o && v) _valid = true
-    })
-    if (_valid) return p
-    else throw new OpenErr(`unsupported platform: ${p}`)
-}
+import { PRESET_BROWSERS } from './constant'
 
 class OpenErr extends Error {
     constructor(msg: string) {
@@ -26,11 +15,15 @@ class OpenErr extends Error {
 
 class Browser implements _Browser {
     name: string
-    profiles: Partial<Record<OS, BrowserProfile>>
+    profiles: Partial<
+        Record<NodeJS.Platform, BrowserProfile>
+    >
     customCMD: string
     constructor(
         name: string,
-        defaultCMD?: Partial<Record<OS, BrowserProfile>>
+        defaultCMD?: Partial<
+            Record<NodeJS.Platform, BrowserProfile>
+        >
     ) {
         this.name = name
         this.profiles = defaultCMD
@@ -46,12 +39,12 @@ const openWith = async (
     ): Promise<boolean> => {
         return new Promise((res) => {
             let failed = false
-            const s = spawn(args[0], args.slice(1), {
+            const child = spawn(args[0], args.slice(1), {
                 stdio: 'ignore',
                 shell: true,
             })
-            s.on('exit', (code) => {
-                failed = code == 0 ? false : true
+            child.on('exit', (code) => {
+                failed = code !== 0
                 res(!failed)
             })
             setTimeout(() => {
@@ -59,24 +52,25 @@ const openWith = async (
             }, 200)
         })
     }
-    const t = '$TARGET_URL'
-    let c = [...cmd]
-    let m = false
-    c = c.map((a) => {
-        const idx = a.indexOf(t)
-        if (idx != -1) {
-            m = true
+    const target = '$TARGET_URL'
+    let match = false
+    const _cmd = cmd.map((arg) => {
+        const idx = arg.indexOf(target)
+        if (idx !== -1) {
+            match = true
             return (
-                a.substr(0, idx) +
+                arg.substr(0, idx) +
                 encodeURIComponent(url) +
-                a.substr(idx + t.length)
+                arg.substr(idx + target.length)
             )
         } else {
-            return a
+            return arg
         }
     })
-    if (!m) c.push(url)
-    return await _spawn(c)
+    if (!match) {
+        _cmd.push(url)
+    }
+    return await _spawn(_cmd)
 }
 
 const getPresetBrowser = (): Browser[] => {
@@ -103,33 +97,43 @@ export const getValidBrowser = async (): Promise<
     Record<string, string[]>
 > => {
     const browser = getPresetBrowser()
-    const os = getOS<OS>()
-    const p = {} as Record<string, string[]>
+    const os = platform()
+    const preset = {} as Record<string, string[]>
     browser.forEach(async ({ profiles, name }) => {
-        let { ...b } = profiles[os]
-        if (b.test && (await b.test(b))) {
+        let app = profiles[os]
+        if (app.test && (await app.test(app))) {
             for (const pvt of [0, 1]) {
                 const cmds = []
                 if (pvt) {
-                    if (!b?.optional?.private) {
+                    if (!app?.optional?.private) {
                         continue
                     }
-                    b = {
-                        ...b,
-                        ...(b.optional.private ?? {}),
+                    app = {
+                        ...app,
+                        ...(app.optional.private ?? {}),
                     }
                 }
-                if (b.sysCmd) cmds.push(b.sysCmd)
-                if (b.sysArgs)
-                    b.sysArgs.forEach((a) => cmds.push(a))
-                cmds.push(b.cmd)
-                if (b.args)
-                    b.args.forEach((a) => cmds.push(a))
-                p[name + (pvt ? '-private' : '')] = cmds
+                if (app.sysCmd) {
+                    cmds.push(app.sysCmd)
+                }
+                if (app.sysArgs) {
+                    app.sysArgs.forEach((arg) =>
+                        cmds.push(arg)
+                    )
+                }
+                cmds.push(app.cmd)
+                if (app.args) {
+                    app.args.forEach((arg) =>
+                        cmds.push(arg)
+                    )
+                }
+                preset[
+                    name + (pvt ? '-private' : '')
+                ] = cmds
             }
         }
     })
-    return p
+    return preset
 }
 
 export { Browser, BrowserProfile, openWith, OpenErr }
