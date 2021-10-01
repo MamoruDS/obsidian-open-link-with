@@ -9,15 +9,20 @@ import {
 } from 'obsidian'
 import { DEFAULT_OPEN_WITH } from './constant'
 import { openWith, getValidBrowser } from './open'
+import { log } from './utils'
 
 interface PluginSettings {
     selected: string
     custom: Record<string, string[]>
+    enableLog: boolean
+    timeout: number
 }
 
 const DEFAULT_SETTINGS: PluginSettings = {
     selected: DEFAULT_OPEN_WITH,
     custom: {},
+    enableLog: false,
+    timeout: 500,
 }
 
 export default class OpenLinkPlugin extends Plugin {
@@ -43,12 +48,25 @@ export default class OpenLinkPlugin extends Plugin {
                     const cur = this.settings.selected
                     if (cur !== DEFAULT_OPEN_WITH) {
                         evt.preventDefault()
-                        if (
-                            !(await openWith(
-                                url,
-                                this.profiles[cur]
-                            ))
-                        ) {
+                        const code = await openWith(
+                            url,
+                            this.profiles[cur],
+                            {
+                                enableLog:
+                                    this.settings.enableLog,
+                                timeout:
+                                    this.settings.timeout,
+                            }
+                        )
+                        if (code !== 0) {
+                            if (this.settings.enableLog) {
+                                log(
+                                    'error',
+                                    'failed to open',
+                                    `'spawn' exited with code ${code} when ` +
+                                        `trying to open an external link with ${cur}.`
+                                )
+                            }
                             open(url)
                         }
                     }
@@ -64,6 +82,9 @@ export default class OpenLinkPlugin extends Plugin {
         )
     }
     async saveSettings() {
+        if (this.settings.enableLog) {
+            log('info', 'saving settings', this.settings)
+        }
         await this.saveData(this.settings)
     }
 }
@@ -87,6 +108,7 @@ class PanicModal extends Modal {
 class SettingTab extends PluginSettingTab {
     plugin: OpenLinkPlugin
     _profileChangeHandler: Debouncer<string[]>
+    _timeoutChangeHandler: Debouncer<string[]>
     constructor(app: App, plugin: OpenLinkPlugin) {
         super(app, plugin)
         this.plugin = plugin
@@ -108,6 +130,22 @@ class SettingTab extends PluginSettingTab {
             1500,
             true
         )
+        this._timeoutChangeHandler = debounce(
+            async (val) => {
+                const timeout = parseInt(val)
+                if (Number.isNaN(timeout)) {
+                    this.panic(
+                        'Value of timeout should be interger.'
+                    )
+                } else {
+                    this.plugin.settings.timeout = timeout
+                    await this.plugin.saveSettings()
+                    this._render()
+                }
+            },
+            1500,
+            true
+        )
     }
     panic(msg: string) {
         new PanicModal(this.app, msg).open()
@@ -117,7 +155,9 @@ class SettingTab extends PluginSettingTab {
         containerEl.empty()
         new Setting(containerEl)
             .setName('Browser')
-            .setDesc('Open external link with...')
+            .setDesc(
+                'Open external link with selected browser.'
+            )
             .addDropdown((dd) => {
                 const cur = this.plugin.settings.selected
                 const items: string[] = []
@@ -144,7 +184,7 @@ class SettingTab extends PluginSettingTab {
             })
         new Setting(containerEl)
             .setName('Customization')
-            .setDesc('Customization profiles in JSON')
+            .setDesc('Customization profiles in JSON.')
             .addText((text) =>
                 text
                     .setPlaceholder('{}')
@@ -156,6 +196,32 @@ class SettingTab extends PluginSettingTab {
                         )
                     )
                     .onChange(this._profileChangeHandler)
+            )
+        new Setting(containerEl)
+            .setName('Logs')
+            .setDesc(
+                'Display logs in console (open developer tools to view).'
+            )
+            .addToggle((toggle) => {
+                toggle
+                    .setValue(
+                        this.plugin.settings.enableLog
+                    )
+                    .onChange((val) => {
+                        this.plugin.settings.enableLog = val
+                        this.plugin.saveSettings()
+                        this._render()
+                    })
+            })
+        new Setting(containerEl)
+            .setName('Timeout')
+            .addText((text) =>
+                text
+                    .setPlaceholder('500')
+                    .setValue(
+                        this.plugin.settings.timeout.toString()
+                    )
+                    .onChange(this._timeoutChangeHandler)
             )
     }
     display(): void {

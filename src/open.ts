@@ -6,6 +6,7 @@ import {
     BrowserProfile,
 } from './types'
 import { PRESET_BROWSERS } from './constant'
+import { log } from './utils'
 
 class OpenErr extends Error {
     constructor(msg: string) {
@@ -32,24 +33,37 @@ class Browser implements _Browser {
 
 const openWith = async (
     url: string,
-    cmd: string[]
-): Promise<boolean> => {
+    cmd: string[],
+    options: Partial<{
+        enableLog: boolean
+        timeout: number
+    }> = {}
+): Promise<number> => {
     const _spawn = async (
         args: string[]
-    ): Promise<boolean> => {
+    ): Promise<number> => {
         return new Promise((res) => {
-            let failed = false
-            const child = spawn(args[0], args.slice(1), {
+            const _args: string[] = [...args]
+            const reg = RegExp(/^[^"|'](.+)(?<!\\)(\ ){1}/)
+            const match = reg.exec(_args[0])
+            if (match !== null) {
+                // TODO: may have potential issues
+                _args[0] = `"${_args[0]}"`
+            }
+            reg.exec(_args[0])
+            if (options?.enableLog ?? false) {
+                log('info', 'opening', _args.join(' '))
+            }
+            const child = spawn(_args[0], args.slice(1), {
                 stdio: 'ignore',
                 shell: true,
             })
             child.on('exit', (code) => {
-                failed = code !== 0
-                res(!failed)
+                res(code)
             })
             setTimeout(() => {
-                res(!failed)
-            }, 200)
+                res(0)
+            }, options?.timeout ?? 250)
         })
     }
     const target = '$TARGET_URL'
@@ -101,7 +115,11 @@ export const getValidBrowser = async (): Promise<
     const preset = {} as Record<string, string[]>
     browser.forEach(async ({ profiles, name }) => {
         let app = profiles[os]
-        if (app.test && (await app.test(app))) {
+        if (
+            typeof app !== 'undefined' &&
+            app.test &&
+            (await app.test(app))
+        ) {
             for (const pvt of [0, 1]) {
                 const cmds = []
                 if (pvt) {
@@ -127,9 +145,8 @@ export const getValidBrowser = async (): Promise<
                         cmds.push(arg)
                     )
                 }
-                preset[
-                    name + (pvt ? '-private' : '')
-                ] = cmds
+                preset[name + (pvt ? '-private' : '')] =
+                    cmds
             }
         }
     })
