@@ -19,4 +19,6 @@ interface Browser {
     >
 }
 
-export { Browser, BrowserOptions, BrowserProfile }
+type LOG_TYPE = 'info' | 'warn' | 'error'
+
+export { Browser, BrowserOptions, BrowserProfile, LOG_TYPE }
