@@ -22,6 +22,26 @@ Select which browser you want to open external link with in plugin's setting men
 Put your custom profile in plugin's setting menu. Profile should contain `name(string): commands(string[])` which is demonstrated in the following:
 _PS._ If the name in the user defined profile is same as the preset, it will be _ignored_.
 
+Examples:
+
+<details><summary>For MacOS</summary>
+
+```json
+{
+    "waterfox": [
+        "/Applications/Waterfox.app/Contents/MacOS/waterfox"
+    ],
+    "waterfox-private": [
+        "/Applications/Waterfox.app/Contents/MacOS/waterfox",
+        "--private-window"
+    ]
+}
+```
+
+</details>
+
+<details><summary>For Windows</summary>
+
 ```json
 {
     "opera": [
@@ -33,6 +53,8 @@ _PS._ If the name in the user defined profile is same as the preset, it will be 
     ]
 }
 ```
+
+</details>
 
 ## Changelog
 
