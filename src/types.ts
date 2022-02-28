@@ -1,3 +1,9 @@
+enum Platform {
+    Unknown = 'unknown',
+    Linux = 'linux',
+    Mac = 'mac',
+    Win = 'win',
+}
 interface BrowserOptions {
     private: Partial<Omit<BrowserProfile, 'optional'>>
     background: boolean
@@ -19,6 +25,29 @@ interface Browser {
     >
 }
 
+type ValidModifier =
+    | 'none'
+    | 'ctrl'
+    | 'meta'
+    | 'alt'
+    | 'shift'
+
+interface ModifierBinding {
+    id: string
+    browser?: string
+    platform: Platform
+    modifier: ValidModifier
+    allowAuxClick: boolean
+}
+
 type LOG_TYPE = 'info' | 'warn' | 'error'
 
-export { Browser, BrowserOptions, BrowserProfile, LOG_TYPE }
+export {
+    Browser,
+    BrowserOptions,
+    BrowserProfile,
+    LOG_TYPE,
+    ModifierBinding,
+    ValidModifier,
+    Platform,
+}
