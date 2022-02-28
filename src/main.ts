@@ -36,41 +36,78 @@ export default class OpenLinkPlugin extends Plugin {
     }
     async onload() {
         await this.loadSettings()
+        const extLinkClick = async (
+            evt: MouseEvent,
+            validClassName: string,
+            isAuxClick: boolean
+        ): Promise<void> => {
+            const el = evt.target as Element
+            if (el.classList.contains(validClassName)) {
+                if (this.settings.enableLog) {
+                    const { altKey, ctrlKey, metaKey } = evt
+                    log(
+                        'info',
+                        'external link clicked...',
+                        {
+                            modifiers: {
+                                altKey,
+                                ctrlKey,
+                                metaKey,
+                            },
+                            mouseEvent: evt,
+                            isAuxClick,
+                        }
+                    )
+                }
+                const url = el.getAttribute('href')
+                const cur = this.settings.selected
+                if (cur !== DEFAULT_OPEN_WITH) {
+                    evt.preventDefault()
+                    const code = await openWith(
+                        url,
+                        this.profiles[cur],
+                        {
+                            enableLog:
+                                this.settings.enableLog,
+                            timeout: this.settings.timeout,
+                        }
+                    )
+                    if (code !== 0) {
+                        if (this.settings.enableLog) {
+                            log(
+                                'error',
+                                'failed to open',
+                                `'spawn' exited with code ${code} when ` +
+                                    `trying to open an external link with ${cur}.`
+                            )
+                        }
+                        open(url)
+                    }
+                }
+            }
+        }
         this.presetProfiles = await getValidBrowser()
         this.addSettingTab(new SettingTab(this.app, this))
         this.registerDomEvent(
             document,
             'click',
-            async (evt: MouseEvent) => {
-                const ele = evt.target as Element
-                if (ele.className === 'fake-external-link') {
-                    const url = ele.getAttribute('href')
-                    const cur = this.settings.selected
-                    if (cur !== DEFAULT_OPEN_WITH) {
-                        evt.preventDefault()
-                        const code = await openWith(
-                            url,
-                            this.profiles[cur],
-                            {
-                                enableLog:
-                                    this.settings.enableLog,
-                                timeout:
-                                    this.settings.timeout,
-                            }
-                        )
-                        if (code !== 0) {
-                            if (this.settings.enableLog) {
-                                log(
-                                    'error',
-                                    'failed to open',
-                                    `'spawn' exited with code ${code} when ` +
-                                        `trying to open an external link with ${cur}.`
-                                )
-                            }
-                            open(url)
-                        }
-                    }
-                }
+            (evt: MouseEvent) => {
+                return extLinkClick(
+                    evt,
+                    'fake-external-link',
+                    false
+                )
+            }
+        )
+        this.registerDomEvent(
+            document,
+            'auxclick',
+            (evt: MouseEvent) => {
+                return extLinkClick(
+                    evt,
+                    'external-link',
+                    true
+                )
             }
         )
         eval(`
@@ -97,11 +134,28 @@ export default class OpenLinkPlugin extends Plugin {
                         document.body.append(fake)
                     }
                     fake.setAttr('href', url)
-                    fake.click()
                 } else {
                     window._open(e, t, n)
                 }
-            }  
+            }
+            window.document.addEventListener('click', (e) => {
+                const fakeId = 'fake_extlink'
+                if (e.target.classList == 'external-link') {
+                    const fake = document.getElementById(fakeId)
+                    if (fake != null) {
+                        e.preventDefault()
+                        const e_cp = new MouseEvent(e.type, e)
+                        fake.dispatchEvent(e_cp)
+                        fake.remove()
+                    } else {
+                        console.error(
+                            '[open-link-with] fake-el with "' +
+                                fakeId +
+                                '" not found'
+                        )
+                    }
+                }
+            })
         `)
     }
     async loadSettings() {

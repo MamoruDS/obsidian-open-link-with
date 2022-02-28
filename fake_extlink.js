@@ -21,8 +21,25 @@ window.open = (e, t, n) => {
             document.body.append(fake)
         }
         fake.setAttr('href', url)
-        fake.click()
     } else {
         window._open(e, t, n)
     }
 }
+window.document.addEventListener('click', (e) => {
+    const fakeId = 'fake_extlink'
+    if (e.target.classList == 'external-link') {
+        const fake = document.getElementById(fakeId)
+        if (fake != null) {
+            e.preventDefault()
+            const e_cp = new MouseEvent(e.type, e)
+            fake.dispatchEvent(e_cp)
+            fake.remove()
+        } else {
+            console.error(
+                '[open-link-with] fake-el with "' +
+                    fakeId +
+                    '" not found'
+            )
+        }
+    }
+})
