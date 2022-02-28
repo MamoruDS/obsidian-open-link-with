@@ -2,9 +2,14 @@ import { spawnSync } from 'child_process'
 import { existsSync } from 'fs'
 import * as path from 'path'
 
-import { BrowserProfile } from './types'
+import {
+    BrowserProfile,
+    Platform,
+    ValidModifier,
+} from './types'
 
 const DEFAULT_OPEN_WITH = 'system-default'
+const GLOBAL_BROWSER = 'global'
 
 const PRESET_BROWSERS = {
     safari: {
@@ -187,4 +192,35 @@ const PRESET_BROWSERS = {
     Partial<Record<NodeJS.Platform, BrowserProfile>>
 >
 
-export { DEFAULT_OPEN_WITH, PRESET_BROWSERS }
+const MODIFIER_TEXT_FALLBACK: Record<
+    ValidModifier,
+    string
+> = {
+    none: 'None',
+    meta: 'Meta',
+    alt: 'Alt',
+    ctrl: 'Ctrl',
+    shift: 'Shift',
+}
+
+const MODIFIER_TEXT: Partial<
+    Record<Platform, Partial<Record<ValidModifier, string>>>
+> = {
+    mac: {
+        meta: 'Cmd⌘',
+        alt: 'Option⌥',
+        ctrl: 'Control⌃',
+        shift: 'Shift⇧',
+    },
+    win: {
+        meta: 'Windows',
+    },
+}
+
+export {
+    DEFAULT_OPEN_WITH,
+    GLOBAL_BROWSER,
+    MODIFIER_TEXT,
+    MODIFIER_TEXT_FALLBACK,
+    PRESET_BROWSERS,
+}
