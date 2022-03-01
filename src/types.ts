@@ -4,6 +4,15 @@ enum Platform {
     Mac = 'mac',
     Win = 'win',
 }
+
+enum MouseButton {
+    Main,
+    Auxiliary,
+    Secondary,
+    Fourth,
+    Fifth,
+}
+
 interface BrowserOptions {
     private: Partial<Omit<BrowserProfile, 'optional'>>
     background: boolean
@@ -48,6 +57,7 @@ export {
     BrowserProfile,
     LOG_TYPE,
     ModifierBinding,
+    MouseButton,
     ValidModifier,
     Platform,
 }
