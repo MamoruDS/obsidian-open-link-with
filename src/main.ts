@@ -122,6 +122,14 @@ export default class OpenLinkPlugin extends Plugin {
                         }
                     )
                 }
+                // right click trigger (windows only)
+                if (
+                    typeof options.allowedButton !=
+                        'undefined' &&
+                    button != options.allowedButton
+                ) {
+                    return
+                }
                 if (typeof cmd !== 'undefined') {
                     evt.preventDefault()
                     const code = await openWith(url, cmd, {
