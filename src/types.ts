@@ -41,7 +41,7 @@ interface ModifierBinding {
     browser?: string
     platform: Platform
     modifier: ValidModifier
-    allowAuxClick: boolean
+    auxClickOnly: boolean
 }
 
 interface ProfileDisplay {

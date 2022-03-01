@@ -7,20 +7,40 @@ import {
     PluginSettingTab,
     Setting,
 } from 'obsidian'
-import { DEFAULT_OPEN_WITH } from './constant'
+import {
+    BROWSER_SYSTEM,
+    BROWSER_GLOBAL,
+    MODIFIER_TEXT,
+    MODIFIER_TEXT_FALLBACK,
+} from './constant'
 import { openWith, getValidBrowser } from './open'
-import { log } from './utils'
+import {
+    ModifierBinding,
+    MouseButton,
+    Optional,
+    Platform,
+    ProfileDisplay,
+    ValidModifier,
+} from './types'
+import {
+    genRandomStr,
+    getPlatform,
+    getValidModifiers,
+    log,
+} from './utils'
 
 interface PluginSettings {
     selected: string
     custom: Record<string, string[]>
+    modifierBindings: ModifierBinding[]
     enableLog: boolean
     timeout: number
 }
 
 const DEFAULT_SETTINGS: PluginSettings = {
-    selected: DEFAULT_OPEN_WITH,
+    selected: BROWSER_SYSTEM.val,
     custom: {},
+    modifierBindings: [],
     enableLog: false,
     timeout: 500,
 }
@@ -39,46 +59,82 @@ export default class OpenLinkPlugin extends Plugin {
         const extLinkClick = async (
             evt: MouseEvent,
             validClassName: string,
-            isAuxClick: boolean
+            options: {
+                allowedButton?: MouseButton
+            } = {}
         ): Promise<void> => {
             const el = evt.target as Element
             if (el.classList.contains(validClassName)) {
+                const {
+                    button,
+                    altKey,
+                    ctrlKey,
+                    metaKey,
+                    shiftKey,
+                } = evt
+                let modifier: ValidModifier = 'none'
+                if (altKey) {
+                    modifier = 'alt'
+                } else if (ctrlKey) {
+                    modifier = 'ctrl'
+                } else if (metaKey) {
+                    modifier = 'meta'
+                } else if (shiftKey) {
+                    modifier = 'shift'
+                }
+                const url = el.getAttribute('href')
+                const profileName =
+                    this.settings.modifierBindings.find(
+                        (mb) => {
+                            if (
+                                mb.auxClickOnly &&
+                                button !=
+                                    MouseButton.Auxiliary
+                            ) {
+                                return false
+                            } else {
+                                return (
+                                    mb.modifier == modifier
+                                )
+                            }
+                        }
+                    )?.browser
+                const cmd = this.getOpenCMD(
+                    profileName ?? this.settings.selected
+                )
                 if (this.settings.enableLog) {
-                    const { altKey, ctrlKey, metaKey } = evt
                     log(
                         'info',
                         'external link clicked...',
                         {
-                            modifiers: {
+                            click: {
+                                button,
                                 altKey,
                                 ctrlKey,
                                 metaKey,
+                                shiftKey,
                             },
+                            modifier,
                             mouseEvent: evt,
-                            isAuxClick,
+                            url,
+                            profileName,
+                            cmd,
                         }
                     )
                 }
-                const url = el.getAttribute('href')
-                const cur = this.settings.selected
-                if (cur !== DEFAULT_OPEN_WITH) {
+                if (typeof cmd !== 'undefined') {
                     evt.preventDefault()
-                    const code = await openWith(
-                        url,
-                        this.profiles[cur],
-                        {
-                            enableLog:
-                                this.settings.enableLog,
-                            timeout: this.settings.timeout,
-                        }
-                    )
+                    const code = await openWith(url, cmd, {
+                        enableLog: this.settings.enableLog,
+                        timeout: this.settings.timeout,
+                    })
                     if (code !== 0) {
                         if (this.settings.enableLog) {
                             log(
                                 'error',
                                 'failed to open',
                                 `'spawn' exited with code ${code} when ` +
-                                    `trying to open an external link with ${cur}.`
+                                    `trying to open an external link with ${profileName}.`
                             )
                         }
                         open(url)
@@ -95,7 +151,9 @@ export default class OpenLinkPlugin extends Plugin {
                 return extLinkClick(
                     evt,
                     'fake-external-link',
-                    false
+                    {
+                        allowedButton: MouseButton.Main,
+                    }
                 )
             }
         )
@@ -103,11 +161,9 @@ export default class OpenLinkPlugin extends Plugin {
             document,
             'auxclick',
             (evt: MouseEvent) => {
-                return extLinkClick(
-                    evt,
-                    'external-link',
-                    true
-                )
+                return extLinkClick(evt, 'external-link', {
+                    allowedButton: MouseButton.Auxiliary,
+                })
             }
         )
         eval(`
@@ -170,6 +226,15 @@ export default class OpenLinkPlugin extends Plugin {
             log('info', 'saving settings', this.settings)
         }
         await this.saveData(this.settings)
+    }
+    getOpenCMD(val: string): Optional<string[]> {
+        if (val === BROWSER_SYSTEM.val) {
+            return undefined
+        }
+        if (val === BROWSER_GLOBAL.val) {
+            val = this.settings.selected
+        }
+        return this.profiles[val]
     }
 }
 
@@ -244,23 +309,25 @@ class SettingTab extends PluginSettingTab {
             )
             .addDropdown((dd) => {
                 const cur = this.plugin.settings.selected
-                const items: string[] = []
+                const items: ProfileDisplay[] = []
                 const profiles = this.plugin.profiles
                 let _match = false
                 for (const p of Object.keys(profiles)) {
                     if (p === cur) {
                         _match = true
-                        items.unshift(p)
+                        items.unshift({ val: p })
                     } else {
-                        items.push(p)
+                        items.push({ val: p })
                     }
                 }
                 if (!_match) {
-                    items.unshift(DEFAULT_OPEN_WITH)
+                    items.unshift(BROWSER_SYSTEM)
                 } else {
-                    items.push(DEFAULT_OPEN_WITH)
+                    items.push(BROWSER_SYSTEM)
                 }
-                items.forEach((i) => dd.addOption(i, i))
+                items.forEach((i) =>
+                    dd.addOption(i.val, i.display ?? i.val)
+                )
                 dd.onChange(async (p) => {
                     this.plugin.settings.selected = p
                     await this.plugin.saveSettings()
@@ -269,7 +336,7 @@ class SettingTab extends PluginSettingTab {
         new Setting(containerEl)
             .setName('Customization')
             .setDesc('Customization profiles in JSON.')
-            .addText((text) =>
+            .addTextArea((text) =>
                 text
                     .setPlaceholder('{}')
                     .setValue(
@@ -281,21 +348,138 @@ class SettingTab extends PluginSettingTab {
                     )
                     .onChange(this._profileChangeHandler)
             )
+        const mbSetting = new Setting(containerEl)
+            .setName('Modifier Bindings')
+            // .setDesc('') // TODO:
+            .addButton((btn) => {
+                btn.setButtonText('Add')
+                btn.onClick(async (_) => {
+                    this.plugin.settings.modifierBindings.unshift(
+                        {
+                            id: genRandomStr(6),
+                            platform: Platform.Unknown,
+                            modifier: 'none',
+                            auxClickOnly: true,
+                        }
+                    )
+                    await this.plugin.saveSettings()
+                    this._render()
+                })
+            })
+        const mbSettingEl = mbSetting.settingEl
+        mbSettingEl.setAttr('style', 'flex-wrap:wrap')
+        const bindings =
+            this.plugin.settings.modifierBindings
+
+        bindings.forEach((mb) => {
+            const ctr = document.createElement('div')
+            ctr.setAttr(
+                'style',
+                'flex-basis:100%;height:auto;margin-top:18px'
+            )
+            const mini = document.createElement('div')
+            const kb = new Setting(mini)
+            kb.addDropdown((dd) => {
+                const browsers: ProfileDisplay[] = [
+                    ...Object.keys(
+                        this.plugin.profiles
+                    ).map((b) => {
+                        return { val: b }
+                    }),
+                    BROWSER_SYSTEM,
+                    BROWSER_GLOBAL,
+                ]
+                browsers.forEach((b) => {
+                    dd.addOption(b.val, b.display ?? b.val)
+                })
+                dd.setValue(
+                    mb.browser ?? BROWSER_GLOBAL.val
+                )
+                dd.onChange(async (browser) => {
+                    if (browser == BROWSER_GLOBAL.val) {
+                        browser = undefined
+                    }
+                    this.plugin.settings.modifierBindings.find(
+                        (m) => m.id == mb.id
+                    ).browser = browser
+                    await this.plugin.saveSettings()
+                })
+            })
+                .addToggle((toggle) => {
+                    toggle.setValue(mb.auxClickOnly)
+                    toggle.setTooltip(
+                        'Allow middle mouse button click'
+                    )
+                    toggle.onChange(async (val) => {
+                        this.plugin.settings.modifierBindings.find(
+                            (m) => m.id == mb.id
+                        ).auxClickOnly = val
+                        await this.plugin.saveSettings()
+                    })
+                })
+                .addDropdown((dd) => {
+                    const platform = getPlatform()
+                    getValidModifiers(platform).forEach(
+                        (m) => {
+                            dd.addOption(
+                                m,
+                                {
+                                    ...MODIFIER_TEXT_FALLBACK,
+                                    ...MODIFIER_TEXT[
+                                        platform
+                                    ],
+                                }[m]
+                            )
+                        }
+                    )
+                    dd.setValue(mb.modifier)
+                    dd.onChange(
+                        async (modifier: ValidModifier) => {
+                            this.plugin.settings.modifierBindings.find(
+                                (m) => m.id == mb.id
+                            ).modifier = modifier
+                            await this.plugin.saveSettings()
+                        }
+                    )
+                })
+                .addButton((btn) => {
+                    btn.setButtonText('Delete')
+                    btn.setClass('mod-warning')
+                    btn.onClick(async (_) => {
+                        const idx =
+                            this.plugin.settings.modifierBindings.findIndex(
+                                (m) => m.id == mb.id
+                            )
+                        this.plugin.settings.modifierBindings.splice(
+                            idx,
+                            1
+                        )
+                        await this.plugin.saveSettings()
+                        this._render()
+                    })
+                })
+            kb.controlEl.setAttr(
+                'style',
+                'justify-content: space-between !important;'
+            )
+            mbSettingEl.appendChild(ctr)
+            ctr.appendChild(kb.controlEl)
+        })
+
         new Setting(containerEl)
             .setName('Logs')
             .setDesc(
                 'Display logs in console (open developer tools to view).'
             )
             .addToggle((toggle) => {
-                toggle
-                    .setValue(
-                        this.plugin.settings.enableLog
-                    )
-                    .onChange((val) => {
-                        this.plugin.settings.enableLog = val
-                        this.plugin.saveSettings()
-                        this._render()
-                    })
+                toggle.setValue(
+                    this.plugin.settings.enableLog
+                )
+                toggle.onChange(async (val) => {
+                    this.plugin.settings.enableLog = val
+                    await this.plugin.saveSettings()
+                    this._render()
+                })
             })
         new Setting(containerEl)
             .setName('Timeout')
