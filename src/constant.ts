@@ -5,11 +5,18 @@ import * as path from 'path'
 import {
     BrowserProfile,
     Platform,
+    ProfileDisplay,
     ValidModifier,
 } from './types'
 
-const DEFAULT_OPEN_WITH = 'system-default'
-const GLOBAL_BROWSER = 'global'
+const BROWSER_SYSTEM: ProfileDisplay = {
+    val: '_system',
+    display: 'system-default',
+}
+const BROWSER_GLOBAL: ProfileDisplay = {
+    val: '_global',
+    display: 'global',
+}
 
 const PRESET_BROWSERS = {
     safari: {
@@ -218,8 +225,8 @@ const MODIFIER_TEXT: Partial<
 }
 
 export {
-    DEFAULT_OPEN_WITH,
-    GLOBAL_BROWSER,
+    BROWSER_SYSTEM,
+    BROWSER_GLOBAL,
     MODIFIER_TEXT,
     MODIFIER_TEXT_FALLBACK,
     PRESET_BROWSERS,
