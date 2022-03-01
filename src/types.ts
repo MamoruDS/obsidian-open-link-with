@@ -1,3 +1,5 @@
+type Optional<T> = T | undefined
+
 enum Platform {
     Unknown = 'unknown',
     Linux = 'linux',
@@ -34,13 +36,6 @@ interface Browser {
     >
 }
 
-type ValidModifier =
-    | 'none'
-    | 'ctrl'
-    | 'meta'
-    | 'alt'
-    | 'shift'
-
 interface ModifierBinding {
     id: string
     browser?: string
@@ -49,7 +44,19 @@ interface ModifierBinding {
     allowAuxClick: boolean
 }
 
+interface ProfileDisplay {
+    val: string
+    display?: string
+}
+
 type LOG_TYPE = 'info' | 'warn' | 'error'
+
+type ValidModifier =
+    | 'none'
+    | 'ctrl'
+    | 'meta'
+    | 'alt'
+    | 'shift'
 
 export {
     Browser,
@@ -58,6 +65,8 @@ export {
     LOG_TYPE,
     ModifierBinding,
     MouseButton,
-    ValidModifier,
+    Optional,
     Platform,
+    ProfileDisplay,
+    ValidModifier,
 }
