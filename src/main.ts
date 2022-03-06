@@ -358,9 +358,9 @@ class SettingTab extends PluginSettingTab {
             )
         const mbSetting = new Setting(containerEl)
             .setName('Modifier Bindings')
-            // .setDesc('') // TODO:
+            .setDesc('Matching from top to bottom')
             .addButton((btn) => {
-                btn.setButtonText('Add')
+                btn.setButtonText('New')
                 btn.onClick(async (_) => {
                     this.plugin.settings.modifierBindings.unshift(
                         {
@@ -416,7 +416,7 @@ class SettingTab extends PluginSettingTab {
                 .addToggle((toggle) => {
                     toggle.setValue(mb.auxClickOnly)
                     toggle.setTooltip(
-                        'Allow middle mouse button click'
+                        'Triggered on middle mouse button click only'
                     )
                     toggle.onChange(async (val) => {
                         this.plugin.settings.modifierBindings.find(
@@ -451,7 +451,7 @@ class SettingTab extends PluginSettingTab {
                     )
                 })
                 .addButton((btn) => {
-                    btn.setButtonText('Delete')
+                    btn.setButtonText('Remove')
                     btn.setClass('mod-warning')
                     btn.onClick(async (_) => {
                         const idx =
