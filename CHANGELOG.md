@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.5
+
+-   added: custom modifier key bindings
+-   added: middle mouse click support
+
 ## 0.1.3
 
 -   added: new setting items `Logs` and `Timeout`

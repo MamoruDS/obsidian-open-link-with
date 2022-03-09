@@ -1,3 +1,20 @@
+type Optional<T> = T | undefined
+
+enum Platform {
+    Unknown = 'unknown',
+    Linux = 'linux',
+    Mac = 'mac',
+    Win = 'win',
+}
+
+enum MouseButton {
+    Main,
+    Auxiliary,
+    Secondary,
+    Fourth,
+    Fifth,
+}
+
 interface BrowserOptions {
     private: Partial<Omit<BrowserProfile, 'optional'>>
     background: boolean
@@ -19,6 +36,37 @@ interface Browser {
     >
 }
 
+interface ModifierBinding {
+    id: string
+    browser?: string
+    platform: Platform
+    modifier: ValidModifier
+    auxClickOnly: boolean
+}
+
+interface ProfileDisplay {
+    val: string
+    display?: string
+}
+
 type LOG_TYPE = 'info' | 'warn' | 'error'
 
-export { Browser, BrowserOptions, BrowserProfile, LOG_TYPE }
+type ValidModifier =
+    | 'none'
+    | 'ctrl'
+    | 'meta'
+    | 'alt'
+    | 'shift'
+
+export {
+    Browser,
+    BrowserOptions,
+    BrowserProfile,
+    LOG_TYPE,
+    ModifierBinding,
+    MouseButton,
+    Optional,
+    Platform,
+    ProfileDisplay,
+    ValidModifier,
+}
