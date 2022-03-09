@@ -1,6 +1,6 @@
 {
     "name": "obsidian-open-link-with",
-    "version": "0.1.4",
+    "version": "0.1.5",
     "description": "Open external link with specific browser in Obsidian",
     "main": "dist/main.js",
     "scripts": {
