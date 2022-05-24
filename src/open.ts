@@ -73,9 +73,9 @@ const openWith = async (
         if (idx !== -1) {
             match = true
             return (
-                arg.substr(0, idx) +
+                arg.slice(0, idx) +
                 encodeURIComponent(url) +
-                arg.substr(idx + target.length)
+                arg.slice(idx + target.length)
             )
         } else {
             return arg
