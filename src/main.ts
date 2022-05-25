@@ -30,7 +30,7 @@ import {
     getValidModifiers,
     log,
 } from './utils'
-import { ViewMgr, ViewRec } from './view'
+import { ViewMgr, ViewMode, ViewRec } from './view'
 
 interface PluginSettings {
     selected: string
@@ -38,7 +38,7 @@ interface PluginSettings {
     modifierBindings: ModifierBinding[]
     enableLog: boolean
     timeout: number
-    inAppViewRec: Record<string, ViewRec>
+    inAppViewRec: ViewRec[]
 }
 
 const DEFAULT_SETTINGS: PluginSettings = {
@@ -47,7 +47,7 @@ const DEFAULT_SETTINGS: PluginSettings = {
     modifierBindings: [],
     enableLog: false,
     timeout: 500,
-    inAppViewRec: {},
+    inAppViewRec: [],
 }
 
 export default class OpenLinkPlugin extends Plugin {
@@ -139,7 +139,11 @@ export default class OpenLinkPlugin extends Plugin {
                 }
                 // in-app view
                 if (profileName === BROWSER_IN_APP.val) {
-                    this._viewmgr.createView(url)
+                    this._viewmgr.createView(url, ViewMode.NEW)
+                    return
+                }
+                if (profileName === BROWSER_IN_APP_LAST.val) {
+                    this._viewmgr.createView(url, ViewMode.LAST)
                     return
                 }
                 if (typeof cmd !== 'undefined') {
@@ -419,6 +423,7 @@ class SettingTab extends PluginSettingTab {
                     BROWSER_SYSTEM,
                     BROWSER_GLOBAL,
                     BROWSER_IN_APP,
+                    BROWSER_IN_APP_LAST,
                 ]
                 browsers.forEach((b) => {
                     dd.addOption(b.val, b.display ?? b.val)

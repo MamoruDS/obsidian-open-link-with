@@ -1,8 +1,16 @@
 import { ItemView, WorkspaceLeaf } from 'obsidian'
 import OpenLinkPlugin from './main'
+import { log } from './utils'
+
+enum ViewMode {
+    LAST,
+    NEW,
+}
 
 type ViewRec = {
+    leafId: string
     url: string
+    mode: ViewMode
 }
 
 class InAppView extends ItemView {
@@ -38,56 +46,111 @@ class ViewMgr {
     }
     // private _getLeafID(leaf: WorkspaceLeaf): string {
     // FIXME: missing property
-    private _getLeafID(leaf: any): string {
+    private _getLeafId(leaf: any): string {
         return leaf['id'] ?? ''
     }
-    async createView(url: string): Promise<string> {
-        const leaf = this.plugin.app.workspace.getLeaf(
-            !(
-                this.plugin.app.workspace.activeLeaf.view.getViewType() ===
-                'empty'
+    private _validRecords(): ViewRec[] {
+        const records =
+            this.plugin.settings.inAppViewRec ?? []
+        const validRec: ViewRec[] = []
+        try {
+            for (const rec of records) {
+                if (
+                    this.plugin.app.workspace.getLeafById(
+                        rec.leafId
+                    ) !== null
+                ) {
+                    validRec.push(rec)
+                }
+            }
+        } catch (err) {
+            if (this.plugin.settings.enableLog) {
+                log(
+                    'error',
+                    'failed to restore views',
+                    `${err}`
+                )
+            }
+        }
+        return validRec
+    }
+    async createView(
+        url: string,
+        mode: ViewMode
+    ): Promise<string> {
+        const getNewLeafId = (): string => {
+            const leaf = this.plugin.app.workspace.getLeaf(
+                !(
+                    this.plugin.app.workspace.activeLeaf.view.getViewType() ===
+                    'empty'
+                )
             )
-        )
-        const id = this._getLeafID(leaf)
-        return await this.updateView(id, url)
+            return this._getLeafId(leaf)
+        }
+        let id: string = undefined
+        if (mode == ViewMode.NEW) {
+            id = getNewLeafId()
+        } else {
+            const viewRec = this._validRecords()
+            let rec =
+                viewRec.find(
+                    ({ mode }) => mode === ViewMode.LAST
+                ) ??
+                viewRec.find(
+                    ({ mode }) => mode === ViewMode.NEW
+                )
+            id = rec?.leafId ?? getNewLeafId()
+        }
+        return await this.updateView(id, url, mode)
     }
     async updateView(
-        leafID: string,
-        url: string
+        leafId: string,
+        url: string,
+        mode: ViewMode
     ): Promise<string | null> {
         const leaf =
-            this.plugin.app.workspace.getLeafById(leafID)
-        console.log({
-            msg: 'debug getLeafById',
-            id: leafID,
-            leaf,
-        })
+            this.plugin.app.workspace.getLeafById(leafId)
         if (leaf === null) {
             return null
         } else {
             const view = new InAppView(leaf, url)
             await leaf.open(view)
-            this.plugin.settings.inAppViewRec[leafID] = {
-                url,
+            const rec =
+                this.plugin.settings.inAppViewRec.find(
+                    (rec) => rec.leafId === leafId
+                )
+            if (typeof rec !== 'undefined') {
+                rec.url = url
+                // TODO:
+                rec.mode = rec.mode ?? mode
+            } else {
+                this.plugin.settings.inAppViewRec.unshift({
+                    leafId,
+                    url,
+                    mode,
+                })
             }
             await this.plugin.saveSettings()
-            console.log(this.plugin.settings.inAppViewRec)
-            return leafID
+            return leafId
         }
     }
     async restoreView() {
-        const viewRec =
-            this.plugin.settings.inAppViewRec ?? {}
-        for (const [id, rec] of Object.entries(viewRec)) {
+        const viewRec = this._validRecords()
+        const restored: ViewRec[] = []
+        for (const rec of viewRec) {
             if (
-                (await this.updateView(id, rec.url)) ===
-                null
+                (await this.updateView(
+                    rec.leafId,
+                    rec.url,
+                    rec.mode
+                )) !== null
             ) {
-                delete this.plugin.settings.inAppViewRec[id]
+                restored.push(rec)
             }
         }
+        this.plugin.settings.inAppViewRec = restored
         await this.plugin.saveSettings()
     }
 }
 
-export { InAppView, ViewMgr, ViewRec }
+export { InAppView, ViewMgr, ViewMode, ViewRec }
