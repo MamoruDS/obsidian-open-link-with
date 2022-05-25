@@ -18,6 +18,16 @@ const BROWSER_GLOBAL: ProfileDisplay = {
     display: 'global',
 }
 
+const BROWSER_IN_APP: ProfileDisplay = {
+    val: '_in_app',
+    display: 'in-app view (always new split)',
+}
+
+const BROWSER_IN_APP_LAST: ProfileDisplay = {
+    val: '_in_app_last',
+    display: 'in-app view',
+}
+
 const PRESET_BROWSERS = {
     safari: {
         darwin: {
@@ -227,6 +237,8 @@ const MODIFIER_TEXT: Partial<
 export {
     BROWSER_SYSTEM,
     BROWSER_GLOBAL,
+    BROWSER_IN_APP,
+    BROWSER_IN_APP_LAST,
     MODIFIER_TEXT,
     MODIFIER_TEXT_FALLBACK,
     PRESET_BROWSERS,
