@@ -10,6 +10,8 @@ import {
 import {
     BROWSER_SYSTEM,
     BROWSER_GLOBAL,
+    BROWSER_IN_APP,
+    BROWSER_IN_APP_LAST,
     MODIFIER_TEXT,
     MODIFIER_TEXT_FALLBACK,
 } from './constant'
@@ -28,6 +30,7 @@ import {
     getValidModifiers,
     log,
 } from './utils'
+import { ViewMgr, ViewRec } from './view'
 
 interface PluginSettings {
     selected: string
@@ -35,6 +38,7 @@ interface PluginSettings {
     modifierBindings: ModifierBinding[]
     enableLog: boolean
     timeout: number
+    inAppViewRec: Record<string, ViewRec>
 }
 
 const DEFAULT_SETTINGS: PluginSettings = {
@@ -43,11 +47,13 @@ const DEFAULT_SETTINGS: PluginSettings = {
     modifierBindings: [],
     enableLog: false,
     timeout: 500,
+    inAppViewRec: {},
 }
 
 export default class OpenLinkPlugin extends Plugin {
     settings: PluginSettings
     presetProfiles: Record<string, string[]>
+    _viewmgr: ViewMgr
     get profiles(): Record<string, string[]> {
         return {
             ...this.presetProfiles,
@@ -55,6 +61,7 @@ export default class OpenLinkPlugin extends Plugin {
         }
     }
     async onload() {
+        this._viewmgr = new ViewMgr(this)
         await this.loadSettings()
         const extLinkClick = async (
             evt: MouseEvent,
@@ -128,6 +135,11 @@ export default class OpenLinkPlugin extends Plugin {
                         'undefined' &&
                     button != options.allowedButton
                 ) {
+                    return
+                }
+                // in-app view
+                if (profileName === BROWSER_IN_APP.val) {
+                    this._viewmgr.createView(url)
                     return
                 }
                 if (typeof cmd !== 'undefined') {
@@ -221,6 +233,16 @@ export default class OpenLinkPlugin extends Plugin {
                 }
             })
         `)
+        this.app.workspace.onLayoutReady(async () => {
+            await this._viewmgr.restoreView()
+            if (this.settings.enableLog) {
+                log(
+                    'info',
+                    'restored views',
+                    this.settings.inAppViewRec
+                )
+            }
+        })
     }
     async loadSettings() {
         this.settings = Object.assign(
@@ -396,6 +418,7 @@ class SettingTab extends PluginSettingTab {
                     }),
                     BROWSER_SYSTEM,
                     BROWSER_GLOBAL,
+                    BROWSER_IN_APP,
                 ]
                 browsers.forEach((b) => {
                     dd.addOption(b.val, b.display ?? b.val)
