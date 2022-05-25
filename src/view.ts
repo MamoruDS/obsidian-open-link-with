@@ -1,4 +1,5 @@
 import { ItemView, WorkspaceLeaf } from 'obsidian'
+import {BuiltinIcon} from './obsidian/types'
 import OpenLinkPlugin from './main'
 import { log } from './utils'
 
@@ -14,6 +15,7 @@ type ViewRec = {
 }
 
 class InAppView extends ItemView {
+    icon: BuiltinIcon = 'link'
     frame: HTMLIFrameElement
     title: string
     url: string
