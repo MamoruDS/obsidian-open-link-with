@@ -105,10 +105,8 @@ export default class OpenLinkPlugin extends Plugin {
                                 )
                             }
                         }
-                    )?.browser
-                const cmd = this.getOpenCMD(
-                    profileName ?? this.settings.selected
-                )
+                    )?.browser ?? this.settings.selected
+                const cmd = this.getOpenCMD(profileName)
                 if (this.settings.enableLog) {
                     log(
                         'info',
@@ -139,11 +137,19 @@ export default class OpenLinkPlugin extends Plugin {
                 }
                 // in-app view
                 if (profileName === BROWSER_IN_APP.val) {
-                    this._viewmgr.createView(url, ViewMode.NEW)
+                    this._viewmgr.createView(
+                        url,
+                        ViewMode.NEW
+                    )
                     return
                 }
-                if (profileName === BROWSER_IN_APP_LAST.val) {
-                    this._viewmgr.createView(url, ViewMode.LAST)
+                if (
+                    profileName === BROWSER_IN_APP_LAST.val
+                ) {
+                    this._viewmgr.createView(
+                        url,
+                        ViewMode.LAST
+                    )
                     return
                 }
                 if (typeof cmd !== 'undefined') {
@@ -342,25 +348,27 @@ class SettingTab extends PluginSettingTab {
                 'Open external link with selected browser.'
             )
             .addDropdown((dd) => {
-                const cur = this.plugin.settings.selected
-                const items: ProfileDisplay[] = []
-                const profiles = this.plugin.profiles
-                let _match = false
-                for (const p of Object.keys(profiles)) {
-                    if (p === cur) {
-                        _match = true
-                        items.unshift({ val: p })
-                    } else {
-                        items.push({ val: p })
-                    }
+                const browsers: ProfileDisplay[] = [
+                    BROWSER_SYSTEM,
+                    BROWSER_IN_APP_LAST,
+                    BROWSER_IN_APP,
+                    ...Object.keys(
+                        this.plugin.profiles
+                    ).map((b) => {
+                        return { val: b }
+                    }),
+                ]
+                let current = browsers.findIndex(
+                    ({ val }) =>
+                        val == this.plugin.settings.selected
+                )
+                if (current !== -1) {
+                    browsers.unshift(
+                        browsers.splice(current, 1)[0]
+                    )
                 }
-                if (!_match) {
-                    items.unshift(BROWSER_SYSTEM)
-                } else {
-                    items.push(BROWSER_SYSTEM)
-                }
-                items.forEach((i) =>
-                    dd.addOption(i.val, i.display ?? i.val)
+                browsers.forEach((b) =>
+                    dd.addOption(b.val, b.display ?? b.val)
                 )
                 dd.onChange(async (p) => {
                     this.plugin.settings.selected = p
@@ -415,15 +423,15 @@ class SettingTab extends PluginSettingTab {
             const kb = new Setting(mini)
             kb.addDropdown((dd) => {
                 const browsers: ProfileDisplay[] = [
+                    BROWSER_GLOBAL,
+                    BROWSER_IN_APP_LAST,
+                    BROWSER_IN_APP,
                     ...Object.keys(
                         this.plugin.profiles
                     ).map((b) => {
                         return { val: b }
                     }),
                     BROWSER_SYSTEM,
-                    BROWSER_GLOBAL,
-                    BROWSER_IN_APP,
-                    BROWSER_IN_APP_LAST,
                 ]
                 browsers.forEach((b) => {
                     dd.addOption(b.val, b.display ?? b.val)
