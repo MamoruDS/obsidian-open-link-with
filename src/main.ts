@@ -10,6 +10,8 @@ import {
 import {
     BROWSER_SYSTEM,
     BROWSER_GLOBAL,
+    BROWSER_IN_APP,
+    BROWSER_IN_APP_LAST,
     MODIFIER_TEXT,
     MODIFIER_TEXT_FALLBACK,
 } from './constant'
@@ -28,6 +30,7 @@ import {
     getValidModifiers,
     log,
 } from './utils'
+import { ViewMgr, ViewMode, ViewRec } from './view'
 
 interface PluginSettings {
     selected: string
@@ -35,6 +38,7 @@ interface PluginSettings {
     modifierBindings: ModifierBinding[]
     enableLog: boolean
     timeout: number
+    inAppViewRec: ViewRec[]
 }
 
 const DEFAULT_SETTINGS: PluginSettings = {
@@ -43,11 +47,13 @@ const DEFAULT_SETTINGS: PluginSettings = {
     modifierBindings: [],
     enableLog: false,
     timeout: 500,
+    inAppViewRec: [],
 }
 
 export default class OpenLinkPlugin extends Plugin {
     settings: PluginSettings
     presetProfiles: Record<string, string[]>
+    _viewmgr: ViewMgr
     get profiles(): Record<string, string[]> {
         return {
             ...this.presetProfiles,
@@ -55,6 +61,7 @@ export default class OpenLinkPlugin extends Plugin {
         }
     }
     async onload() {
+        this._viewmgr = new ViewMgr(this)
         await this.loadSettings()
         const extLinkClick = async (
             evt: MouseEvent,
@@ -98,10 +105,8 @@ export default class OpenLinkPlugin extends Plugin {
                                 )
                             }
                         }
-                    )?.browser
-                const cmd = this.getOpenCMD(
-                    profileName ?? this.settings.selected
-                )
+                    )?.browser ?? this.settings.selected
+                const cmd = this.getOpenCMD(profileName)
                 if (this.settings.enableLog) {
                     log(
                         'info',
@@ -128,6 +133,23 @@ export default class OpenLinkPlugin extends Plugin {
                         'undefined' &&
                     button != options.allowedButton
                 ) {
+                    return
+                }
+                // in-app view
+                if (profileName === BROWSER_IN_APP.val) {
+                    this._viewmgr.createView(
+                        url,
+                        ViewMode.NEW
+                    )
+                    return
+                }
+                if (
+                    profileName === BROWSER_IN_APP_LAST.val
+                ) {
+                    this._viewmgr.createView(
+                        url,
+                        ViewMode.LAST
+                    )
                     return
                 }
                 if (typeof cmd !== 'undefined') {
@@ -221,6 +243,16 @@ export default class OpenLinkPlugin extends Plugin {
                 }
             })
         `)
+        this.app.workspace.onLayoutReady(async () => {
+            await this._viewmgr.restoreView()
+            if (this.settings.enableLog) {
+                log(
+                    'info',
+                    'restored views',
+                    this.settings.inAppViewRec
+                )
+            }
+        })
     }
     async loadSettings() {
         this.settings = Object.assign(
@@ -316,25 +348,27 @@ class SettingTab extends PluginSettingTab {
                 'Open external link with selected browser.'
             )
             .addDropdown((dd) => {
-                const cur = this.plugin.settings.selected
-                const items: ProfileDisplay[] = []
-                const profiles = this.plugin.profiles
-                let _match = false
-                for (const p of Object.keys(profiles)) {
-                    if (p === cur) {
-                        _match = true
-                        items.unshift({ val: p })
-                    } else {
-                        items.push({ val: p })
-                    }
+                const browsers: ProfileDisplay[] = [
+                    BROWSER_SYSTEM,
+                    BROWSER_IN_APP_LAST,
+                    BROWSER_IN_APP,
+                    ...Object.keys(
+                        this.plugin.profiles
+                    ).map((b) => {
+                        return { val: b }
+                    }),
+                ]
+                let current = browsers.findIndex(
+                    ({ val }) =>
+                        val == this.plugin.settings.selected
+                )
+                if (current !== -1) {
+                    browsers.unshift(
+                        browsers.splice(current, 1)[0]
+                    )
                 }
-                if (!_match) {
-                    items.unshift(BROWSER_SYSTEM)
-                } else {
-                    items.push(BROWSER_SYSTEM)
-                }
-                items.forEach((i) =>
-                    dd.addOption(i.val, i.display ?? i.val)
+                browsers.forEach((b) =>
+                    dd.addOption(b.val, b.display ?? b.val)
                 )
                 dd.onChange(async (p) => {
                     this.plugin.settings.selected = p
@@ -389,13 +423,15 @@ class SettingTab extends PluginSettingTab {
             const kb = new Setting(mini)
             kb.addDropdown((dd) => {
                 const browsers: ProfileDisplay[] = [
+                    BROWSER_GLOBAL,
+                    BROWSER_IN_APP_LAST,
+                    BROWSER_IN_APP,
                     ...Object.keys(
                         this.plugin.profiles
                     ).map((b) => {
                         return { val: b }
                     }),
                     BROWSER_SYSTEM,
-                    BROWSER_GLOBAL,
                 ]
                 browsers.forEach((b) => {
                     dd.addOption(b.val, b.display ?? b.val)

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.6
+
+-   added: two new open methods: `in-app view` and `in-app view (always new split)` suggested by [#9](https://github.com/MamoruDS/obsidian-open-link-with/issues/9)
+
 ## 0.1.5
 
 -   added: custom modifier key bindings
