@@ -3,7 +3,7 @@
 [![all downloads](https://img.shields.io/github/downloads/mamoruds/obsidian-open-link-with/total?style=flat-square)](https://github.com/MamoruDS/obsidian-open-link-with)
 [![latest release](https://img.shields.io/github/v/release/mamoruds/obsidian-open-link-with?style=flat-square)](https://github.com/MamoruDS/obsidian-open-link-with/releases/latest)
 
-Open external link with specific browser in Obsidian
+Choose your own way to open external links.
 
 ## Installation
 
