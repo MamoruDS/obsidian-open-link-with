@@ -1,4 +1,9 @@
-import { LOG_TYPE, Platform, ValidModifier } from './types'
+import {
+    LOG_TYPE,
+    Modifier,
+    Platform,
+    ValidModifier,
+} from './types'
 
 const getPlatform = (): Platform => {
     const platform = window.navigator.platform
@@ -10,6 +15,26 @@ const getPlatform = (): Platform => {
         default:
             return Platform.Linux
     }
+}
+
+const getModifiersFromMouseEvt = (
+    evt: MouseEvent
+): Modifier[] => {
+    const { altKey, ctrlKey, metaKey, shiftKey } = evt
+    const mods: Modifier[] = []
+    if (altKey) {
+        mods.push(Modifier.Alt)
+    }
+    if (ctrlKey) {
+        mods.push(Modifier.Ctrl)
+    }
+    if (metaKey) {
+        mods.push(Modifier.Meta)
+    }
+    if (shiftKey) {
+        mods.push(Modifier.Shift)
+    }
+    return mods
 }
 
 const genRandomChar = (radix: number): string => {
@@ -70,6 +95,15 @@ const globalWindowFunc = (cb: (win: Window) => void) => {
     })
 }
 
+const intersection = <T>(...lists: T[][]): T[] => {
+    let lhs: T[] = lists.pop()
+    while (lists.length) {
+        const rhs = lists.pop()
+        lhs = lhs.filter((v) => rhs.contains(v))
+    }
+    return lhs
+}
+
 const log = (
     msg_type: LOG_TYPE,
     title: string,
@@ -95,9 +129,11 @@ const log = (
 
 export {
     getPlatform,
+    getModifiersFromMouseEvt,
     genRandomStr,
     getValidModifiers,
     getValidHttpURL,
     globalWindowFunc,
+    intersection,
     log,
 }

@@ -7,6 +7,13 @@ enum Platform {
     Win = 'win',
 }
 
+enum Modifier {
+    Alt = 'alt',
+    Ctrl = 'ctrl',
+    Meta = 'meta',
+    Shift = 'shift',
+}
+
 enum MouseButton {
     Main,
     Auxiliary,
@@ -71,6 +78,7 @@ export {
     BrowserProfile,
     Clickable,
     LOG_TYPE,
+    Modifier,
     ModifierBinding,
     MouseButton,
     Optional,
