@@ -103,7 +103,7 @@ export default class OpenLinkPlugin extends Plugin {
                                 return false
                             } else {
                                 return (
-                                    mb.modifier == modifier
+                                    mb.modifier === modifier
                                 )
                             }
                         }
@@ -207,7 +207,7 @@ export default class OpenLinkPlugin extends Plugin {
                 if (validURL !== null) {
                     const fakeID = 'fake_extlink'
                     let fake = doc.getElementById(fakeID)
-                    if (fake == null) {
+                    if (fake === null) {
                         fake = doc.createElement('span')
                         fake.classList.add(
                             'fake-external-link'
@@ -229,11 +229,18 @@ export default class OpenLinkPlugin extends Plugin {
                     return
                 }
                 const fakeId = 'fake_extlink'
-                if (
-                    e.target.classList.contains(
-                        'external-link'
-                    )
-                ) {
+                const clickable = [
+                    'external-link',
+                    'clickable-icon',
+                    'cm-underline',
+                ] // TODO: update this
+                let is_clickable = false
+                e.target.classList.forEach((cls) => {
+                    if (clickable.includes(cls)) {
+                        is_clickable = true
+                    }
+                })
+                if (is_clickable) {
                     const fake = doc.getElementById(fakeId)
                     if (fake != null) {
                         e.preventDefault()
@@ -372,7 +379,7 @@ class SettingTab extends PluginSettingTab {
                 ]
                 let current = browsers.findIndex(
                     ({ val }) =>
-                        val == this.plugin.settings.selected
+                        val === this.plugin.settings.selected
                 )
                 if (current !== -1) {
                     browsers.unshift(
@@ -452,11 +459,11 @@ class SettingTab extends PluginSettingTab {
                     mb.browser ?? BROWSER_GLOBAL.val
                 )
                 dd.onChange(async (browser) => {
-                    if (browser == BROWSER_GLOBAL.val) {
+                    if (browser === BROWSER_GLOBAL.val) {
                         browser = undefined
                     }
                     this.plugin.settings.modifierBindings.find(
-                        (m) => m.id == mb.id
+                        (m) => m.id === mb.id
                     ).browser = browser
                     await this.plugin.saveSettings()
                 })
@@ -468,7 +475,7 @@ class SettingTab extends PluginSettingTab {
                     )
                     toggle.onChange(async (val) => {
                         this.plugin.settings.modifierBindings.find(
-                            (m) => m.id == mb.id
+                            (m) => m.id === mb.id
                         ).auxClickOnly = val
                         await this.plugin.saveSettings()
                     })
@@ -492,7 +499,7 @@ class SettingTab extends PluginSettingTab {
                     dd.onChange(
                         async (modifier: ValidModifier) => {
                             this.plugin.settings.modifierBindings.find(
-                                (m) => m.id == mb.id
+                                (m) => m.id === mb.id
                             ).modifier = modifier
                             await this.plugin.saveSettings()
                         }
@@ -504,7 +511,7 @@ class SettingTab extends PluginSettingTab {
                     btn.onClick(async (_) => {
                         const idx =
                             this.plugin.settings.modifierBindings.findIndex(
-                                (m) => m.id == mb.id
+                                (m) => m.id === mb.id
                             )
                         this.plugin.settings.modifierBindings.splice(
                             idx,
