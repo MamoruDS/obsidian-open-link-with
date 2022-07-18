@@ -60,6 +60,7 @@ type Clickable = Record<
     string,
     {
         popout?: boolean
+        only_with?: Modifier[]
     }
 >
 

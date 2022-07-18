@@ -18,6 +18,7 @@ import {
 import { openWith, getValidBrowser } from './open'
 import {
     Clickable,
+    Modifier,
     ModifierBinding,
     MouseButton,
     Optional,
@@ -27,10 +28,12 @@ import {
 } from './types'
 import {
     genRandomStr,
+    getModifiersFromMouseEvt,
     getPlatform,
     getValidHttpURL,
     getValidModifiers,
     globalWindowFunc,
+    intersection,
     log,
 } from './utils'
 import { ViewMgr, ViewMode, ViewRec } from './view'
@@ -236,12 +239,17 @@ export default class OpenLinkPlugin extends Plugin {
             doc.addEventListener('click', (evt) => {
                 const el = evt.target as Element
                 const fakeId = 'fake_extlink'
+                const modifiers =
+                    getModifiersFromMouseEvt(evt)
                 const clickable: Clickable = {
                     'external-link': {},
                     'clickable-icon': {
                         popout: true,
                     },
                     'cm-underline': {},
+                    'cm-url': {
+                        only_with: [Modifier.Meta],
+                    },
                 } // TODO: update this
                 const validList = Object.keys(clickable)
                 let is_clickable = false
@@ -249,11 +257,24 @@ export default class OpenLinkPlugin extends Plugin {
                 el.classList.forEach((cls) => {
                     const _idx = validList.indexOf(cls)
                     if (_idx != -1) {
-                        is_clickable = true
-                        popout = clickable[validList[_idx]]
-                            ?.popout
+                        const clickOpt =
+                            clickable[validList[_idx]]
+                        // Clickable.only_with
+                        if (
+                            typeof clickOpt.only_with !==
+                                'undefined' &&
+                            intersection(
+                                modifiers,
+                                clickOpt.only_with
+                            ).length === 0
+                        ) {
+                            return
+                        }
+                        // Clickable.popout
+                        popout = clickOpt?.popout
                             ? true
                             : popout
+                        is_clickable = true
                     }
                 })
                 if (is_clickable) {
