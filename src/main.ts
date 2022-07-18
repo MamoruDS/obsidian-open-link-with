@@ -27,7 +27,9 @@ import {
 import {
     genRandomStr,
     getPlatform,
+    getValidHttpURL,
     getValidModifiers,
+    globalWindowFunc,
     log,
 } from './utils'
 import { ViewMgr, ViewMode, ViewRec } from './view'
@@ -196,41 +198,49 @@ export default class OpenLinkPlugin extends Plugin {
                 })
             }
         )
-        eval(`
-            window._open = window.open
-            window.open = (e, t, n) => {
-                let isExternalLink = false
-                try {
-                    if (
-                        ['http:', 'https:'].indexOf(
-                            new URL(e).protocol
-                        ) != -1
-                    ) {
-                        isExternalLink = true
-                    }
-                } catch (TypeError) {}
-                if (isExternalLink) {
-                    const url = e
+
+        const win_cb = (win: Window) => {
+            const doc = win.document
+            const builtInOpen = win.open
+            win.open = (url, target, features): Window => {
+                const validURL = getValidHttpURL(url)
+                if (validURL !== null) {
                     const fakeID = 'fake_extlink'
-                    let fake = document.getElementById(fakeID)
+                    let fake = doc.getElementById(fakeID)
                     if (fake == null) {
-                        fake = document.createElement('span')
-                        fake.classList.add('fake-external-link')
+                        fake = doc.createElement('span')
+                        fake.classList.add(
+                            'fake-external-link'
+                        )
                         fake.setAttribute('id', fakeID)
-                        document.body.append(fake)
+                        doc.body.append(fake)
                     }
-                    fake.setAttr('href', url)
+                    fake.setAttr('href', `${validURL}`)
                 } else {
-                    window._open(e, t, n)
+                    return builtInOpen(
+                        url,
+                        target,
+                        features
+                    )
                 }
             }
-            window.document.addEventListener('click', (e) => {
+            doc.addEventListener('click', (e) => {
+                if (!(e.target instanceof HTMLElement)) {
+                    return
+                }
                 const fakeId = 'fake_extlink'
-                if (e.target.classList == 'external-link') {
-                    const fake = document.getElementById(fakeId)
+                if (
+                    e.target.classList.contains(
+                        'external-link'
+                    )
+                ) {
+                    const fake = doc.getElementById(fakeId)
                     if (fake != null) {
                         e.preventDefault()
-                        const e_cp = new MouseEvent(e.type, e)
+                        const e_cp = new MouseEvent(
+                            e.type,
+                            e
+                        )
                         fake.dispatchEvent(e_cp)
                         fake.remove()
                     } else {
@@ -242,7 +252,9 @@ export default class OpenLinkPlugin extends Plugin {
                     }
                 }
             })
-        `)
+        }
+        globalWindowFunc(win_cb)
+
         this.app.workspace.onLayoutReady(async () => {
             await this._viewmgr.restoreView()
             if (this.settings.enableLog) {
