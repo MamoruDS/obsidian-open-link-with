@@ -17,17 +17,24 @@ import {
 } from './constant'
 import { openWith, getValidBrowser } from './open'
 import {
+    Clickable,
+    Modifier,
     ModifierBinding,
     MouseButton,
     Optional,
     Platform,
     ProfileDisplay,
     ValidModifier,
+    WindowOLW,
 } from './types'
 import {
     genRandomStr,
+    getModifiersFromMouseEvt,
     getPlatform,
+    getValidHttpURL,
     getValidModifiers,
+    globalWindowFunc,
+    intersection,
     log,
 } from './utils'
 import { ViewMgr, ViewMode, ViewRec } from './view'
@@ -70,6 +77,7 @@ export default class OpenLinkPlugin extends Plugin {
                 allowedButton?: MouseButton
             } = {}
         ): Promise<void> => {
+            const win = activeWindow as WindowOLW
             const el = evt.target as Element
             if (el.classList.contains(validClassName)) {
                 const {
@@ -89,7 +97,7 @@ export default class OpenLinkPlugin extends Plugin {
                 } else if (shiftKey) {
                     modifier = 'shift'
                 }
-                const url = el.getAttribute('href')
+                const url = el.getAttr('href')
                 const profileName =
                     this.settings.modifierBindings.find(
                         (mb) => {
@@ -101,11 +109,15 @@ export default class OpenLinkPlugin extends Plugin {
                                 return false
                             } else {
                                 return (
-                                    mb.modifier == modifier
+                                    mb.modifier === modifier
                                 )
                             }
                         }
                     )?.browser ?? this.settings.selected
+                const popupWindow =
+                    el.getAttr('target') === '_blank'
+                        ? true
+                        : false
                 const cmd = this.getOpenCMD(profileName)
                 if (this.settings.enableLog) {
                     log(
@@ -123,6 +135,7 @@ export default class OpenLinkPlugin extends Plugin {
                             mouseEvent: evt,
                             url,
                             profileName,
+                            popupWindow,
                             cmd,
                         }
                     )
@@ -139,7 +152,10 @@ export default class OpenLinkPlugin extends Plugin {
                 if (profileName === BROWSER_IN_APP.val) {
                     this._viewmgr.createView(
                         url,
-                        ViewMode.NEW
+                        ViewMode.NEW,
+                        {
+                            popupWindow,
+                        }
                     )
                     return
                 }
@@ -167,8 +183,10 @@ export default class OpenLinkPlugin extends Plugin {
                                     `trying to open an external link with ${profileName}.`
                             )
                         }
-                        open(url)
+                        win._builtInOpen(url)
                     }
+                } else {
+                    win._builtInOpen(url)
                 }
             }
         }
@@ -196,41 +214,89 @@ export default class OpenLinkPlugin extends Plugin {
                 })
             }
         )
-        eval(`
-            window._open = window.open
-            window.open = (e, t, n) => {
-                let isExternalLink = false
-                try {
-                    if (
-                        ['http:', 'https:'].indexOf(
-                            new URL(e).protocol
-                        ) != -1
-                    ) {
-                        isExternalLink = true
-                    }
-                } catch (TypeError) {}
-                if (isExternalLink) {
-                    const url = e
+
+        const winFunc = (win: WindowOLW) => {
+            const doc = win.document
+            win._builtInOpen = win.open
+            win.open = (url, target, features): Window => {
+                const validURL = getValidHttpURL(url)
+                if (validURL !== null) {
                     const fakeID = 'fake_extlink'
-                    let fake = document.getElementById(fakeID)
-                    if (fake == null) {
-                        fake = document.createElement('span')
-                        fake.classList.add('fake-external-link')
+                    let fake = doc.getElementById(fakeID)
+                    if (fake === null) {
+                        fake = doc.createElement('span')
+                        fake.classList.add(
+                            'fake-external-link'
+                        )
                         fake.setAttribute('id', fakeID)
-                        document.body.append(fake)
+                        doc.body.append(fake)
                     }
-                    fake.setAttr('href', url)
+                    fake.setAttr('href', `${validURL}`)
                 } else {
-                    window._open(e, t, n)
+                    return win._builtInOpen(
+                        url,
+                        target,
+                        features
+                    )
                 }
             }
-            window.document.addEventListener('click', (e) => {
+            doc.addEventListener('click', (evt) => {
+                const el = evt.target as Element
                 const fakeId = 'fake_extlink'
-                if (e.target.classList == 'external-link') {
-                    const fake = document.getElementById(fakeId)
+                const modifiers =
+                    getModifiersFromMouseEvt(evt)
+                const clickable: Clickable = {
+                    'external-link': {},
+                    'clickable-icon': {
+                        popout: true,
+                    },
+                    'cm-underline': {},
+                    'cm-url': {
+                        only_with:
+                            getPlatform() === Platform.Mac
+                                ? [Modifier.Meta]
+                                : [Modifier.Ctrl],
+                    },
+                } // TODO: update this
+                const validList = Object.keys(clickable)
+                let is_clickable = false
+                let popout = false
+                el.classList.forEach((cls) => {
+                    const _idx = validList.indexOf(cls)
+                    if (_idx != -1) {
+                        const clickOpt =
+                            clickable[validList[_idx]]
+                        // Clickable.only_with
+                        if (
+                            typeof clickOpt.only_with !==
+                                'undefined' &&
+                            intersection(
+                                modifiers,
+                                clickOpt.only_with
+                            ).length === 0
+                        ) {
+                            return
+                        }
+                        // Clickable.popout
+                        popout = clickOpt?.popout
+                            ? true
+                            : popout
+                        is_clickable = true
+                    }
+                })
+                if (is_clickable) {
+                    const fake = doc.getElementById(fakeId)
                     if (fake != null) {
-                        e.preventDefault()
-                        const e_cp = new MouseEvent(e.type, e)
+                        evt.preventDefault()
+                        //
+                        if (popout) {
+                            fake.setAttr('target', '_blank')
+                        }
+                        //
+                        const e_cp = new MouseEvent(
+                            evt.type,
+                            evt
+                        )
                         fake.dispatchEvent(e_cp)
                         fake.remove()
                     } else {
@@ -242,7 +308,9 @@ export default class OpenLinkPlugin extends Plugin {
                     }
                 }
             })
-        `)
+        }
+        globalWindowFunc(winFunc)
+
         this.app.workspace.onLayoutReady(async () => {
             await this._viewmgr.restoreView()
             if (this.settings.enableLog) {
@@ -360,7 +428,8 @@ class SettingTab extends PluginSettingTab {
                 ]
                 let current = browsers.findIndex(
                     ({ val }) =>
-                        val == this.plugin.settings.selected
+                        val ===
+                        this.plugin.settings.selected
                 )
                 if (current !== -1) {
                     browsers.unshift(
@@ -440,11 +509,11 @@ class SettingTab extends PluginSettingTab {
                     mb.browser ?? BROWSER_GLOBAL.val
                 )
                 dd.onChange(async (browser) => {
-                    if (browser == BROWSER_GLOBAL.val) {
+                    if (browser === BROWSER_GLOBAL.val) {
                         browser = undefined
                     }
                     this.plugin.settings.modifierBindings.find(
-                        (m) => m.id == mb.id
+                        (m) => m.id === mb.id
                     ).browser = browser
                     await this.plugin.saveSettings()
                 })
@@ -456,7 +525,7 @@ class SettingTab extends PluginSettingTab {
                     )
                     toggle.onChange(async (val) => {
                         this.plugin.settings.modifierBindings.find(
-                            (m) => m.id == mb.id
+                            (m) => m.id === mb.id
                         ).auxClickOnly = val
                         await this.plugin.saveSettings()
                     })
@@ -480,7 +549,7 @@ class SettingTab extends PluginSettingTab {
                     dd.onChange(
                         async (modifier: ValidModifier) => {
                             this.plugin.settings.modifierBindings.find(
-                                (m) => m.id == mb.id
+                                (m) => m.id === mb.id
                             ).modifier = modifier
                             await this.plugin.saveSettings()
                         }
@@ -492,7 +561,7 @@ class SettingTab extends PluginSettingTab {
                     btn.onClick(async (_) => {
                         const idx =
                             this.plugin.settings.modifierBindings.findIndex(
-                                (m) => m.id == mb.id
+                                (m) => m.id === mb.id
                             )
                         this.plugin.settings.modifierBindings.splice(
                             idx,

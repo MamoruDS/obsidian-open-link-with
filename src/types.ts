@@ -7,6 +7,13 @@ enum Platform {
     Win = 'win',
 }
 
+enum Modifier {
+    Alt = 'alt',
+    Ctrl = 'ctrl',
+    Meta = 'meta',
+    Shift = 'shift',
+}
+
 enum MouseButton {
     Main,
     Auxiliary,
@@ -49,6 +56,23 @@ interface ProfileDisplay {
     display?: string
 }
 
+// for overwrite open method of `window`
+interface WindowOLW extends Window {
+    _builtInOpen: (
+        url?: string | URL,
+        target?: string,
+        features?: string
+    ) => Window
+}
+
+type Clickable = Record<
+    string,
+    {
+        popout?: boolean
+        only_with?: Modifier[]
+    }
+>
+
 type LOG_TYPE = 'info' | 'warn' | 'error'
 
 type ValidModifier =
@@ -62,11 +86,14 @@ export {
     Browser,
     BrowserOptions,
     BrowserProfile,
+    Clickable,
     LOG_TYPE,
+    Modifier,
     ModifierBinding,
     MouseButton,
     Optional,
     Platform,
     ProfileDisplay,
     ValidModifier,
+    WindowOLW,
 }
