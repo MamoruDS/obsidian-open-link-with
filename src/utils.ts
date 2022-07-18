@@ -26,6 +26,33 @@ const genRandomStr = (len: number): string => {
     return id.join('')
 }
 
+const getValidHttpURL = (
+    url?: string | URL
+): string | null => {
+    if (typeof url === 'undefined') {
+        return null
+    } else if (url instanceof URL) {
+        return ['http:', 'https:'].indexOf(url.protocol) !=
+            -1
+            ? url.toString()
+            : null
+    } else {
+        try {
+            if (
+                ['http:', 'https:'].indexOf(
+                    new URL(url).protocol
+                ) != -1
+            ) {
+                return url
+            } else {
+                return null
+            }
+        } catch (TypeError) {
+            return null
+        }
+    }
+}
+
 const getValidModifiers = (
     platform: Platform
 ): ValidModifier[] => {
@@ -34,6 +61,13 @@ const getValidModifiers = (
     } else {
         return ['none', 'ctrl', 'meta', 'alt', 'shift']
     }
+}
+
+const globalWindowFunc = (cb: (win: Window) => void) => {
+    cb(activeWindow)
+    app.workspace.on('window-open', (ww, win) => {
+        cb(win)
+    })
 }
 
 const log = (
@@ -59,4 +93,11 @@ const log = (
     }
 }
 
-export { getPlatform, genRandomStr, getValidModifiers, log }
+export {
+    getPlatform,
+    genRandomStr,
+    getValidModifiers,
+    getValidHttpURL,
+    globalWindowFunc,
+    log,
+}
