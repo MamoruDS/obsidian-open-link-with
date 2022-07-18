@@ -1,5 +1,5 @@
 import { ItemView, WorkspaceLeaf } from 'obsidian'
-import {BuiltinIcon} from './obsidian/types'
+import { BuiltinIcon } from './obsidian/types'
 import OpenLinkPlugin from './main'
 import { log } from './utils'
 
@@ -78,7 +78,10 @@ class ViewMgr {
     }
     async createView(
         url: string,
-        mode: ViewMode
+        mode: ViewMode,
+        options: {
+            popupWindow?: boolean // using popout-win will overwrite mode
+        } = {}
     ): Promise<string> {
         const getNewLeafId = (): string => {
             const leaf = this.plugin.app.workspace.getLeaf(
@@ -90,18 +93,25 @@ class ViewMgr {
             return this._getLeafId(leaf)
         }
         let id: string = undefined
-        if (mode == ViewMode.NEW) {
-            id = getNewLeafId()
+        if (options.popupWindow) {
+            mode = ViewMode.NEW
+            const leaf =
+                this.plugin.app.workspace.openPopoutLeaf()
+            id = this._getLeafId(leaf)
         } else {
-            const viewRec = this._validRecords()
-            let rec =
-                viewRec.find(
-                    ({ mode }) => mode === ViewMode.LAST
-                ) ??
-                viewRec.find(
-                    ({ mode }) => mode === ViewMode.NEW
-                )
-            id = rec?.leafId ?? getNewLeafId()
+            if (mode == ViewMode.NEW) {
+                id = getNewLeafId()
+            } else {
+                const viewRec = this._validRecords()
+                let rec =
+                    viewRec.find(
+                        ({ mode }) => mode === ViewMode.LAST
+                    ) ??
+                    viewRec.find(
+                        ({ mode }) => mode === ViewMode.NEW
+                    )
+                id = rec?.leafId ?? getNewLeafId()
+            }
         }
         return await this.updateView(id, url, mode)
     }
