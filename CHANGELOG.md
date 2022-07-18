@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.7
+
+-   fixed: open links not working in edit mode [#3](https://github.com/MamoruDS/obsidian-open-link-with/issues/3)
+-   fixed: clickable elements support [#12](https://github.com/MamoruDS/obsidian-open-link-with/issues/12)
+-   added: popout windows support [#13](https://github.com/MamoruDS/obsidian-open-link-with/issues/13)
+-   updated: bump up the minimum version requirement to 0.15
+
 ## 0.1.6
 
 -   added: two new open methods: `in-app view` and `in-app view (always new split)` suggested by [#9](https://github.com/MamoruDS/obsidian-open-link-with/issues/9)

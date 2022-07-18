@@ -3,7 +3,7 @@
     "name": "Open Link With",
     "version": "0.1.7",
     "minAppVersion": "0.15.0",
-    "description": "Open external link with specific browser in Obsidian",
+    "description": "Open external link with specific browser / in-app view in Obsidian",
     "author": "MamoruDS",
     "authorUrl": "https://github.com/MamoruDS",
     "isDesktopOnly": true

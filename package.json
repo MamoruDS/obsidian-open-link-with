@@ -1,7 +1,7 @@
 {
     "name": "obsidian-open-link-with",
     "version": "0.1.7",
-    "description": "Open external link with specific browser in Obsidian",
+    "description": "Open external link with specific browser / in-app view in Obsidian",
     "main": "dist/main.js",
     "scripts": {
         "dev": "rollup --config rollup.config.js -w",
