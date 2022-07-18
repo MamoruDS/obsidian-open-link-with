@@ -25,6 +25,7 @@ import {
     Platform,
     ProfileDisplay,
     ValidModifier,
+    WindowOLW,
 } from './types'
 import {
     genRandomStr,
@@ -76,6 +77,7 @@ export default class OpenLinkPlugin extends Plugin {
                 allowedButton?: MouseButton
             } = {}
         ): Promise<void> => {
+            const win = activeWindow as WindowOLW
             const el = evt.target as Element
             if (el.classList.contains(validClassName)) {
                 const {
@@ -181,8 +183,10 @@ export default class OpenLinkPlugin extends Plugin {
                                     `trying to open an external link with ${profileName}.`
                             )
                         }
-                        open(url)
+                        win._builtInOpen(url)
                     }
+                } else {
+                    win._builtInOpen(url)
                 }
             }
         }
@@ -211,9 +215,9 @@ export default class OpenLinkPlugin extends Plugin {
             }
         )
 
-        const winFunc = (win: Window) => {
+        const winFunc = (win: WindowOLW) => {
             const doc = win.document
-            const builtInOpen = win.open
+            win._builtInOpen = win.open
             win.open = (url, target, features): Window => {
                 const validURL = getValidHttpURL(url)
                 if (validURL !== null) {
@@ -229,7 +233,7 @@ export default class OpenLinkPlugin extends Plugin {
                     }
                     fake.setAttr('href', `${validURL}`)
                 } else {
-                    return builtInOpen(
+                    return win._builtInOpen(
                         url,
                         target,
                         features
@@ -248,7 +252,10 @@ export default class OpenLinkPlugin extends Plugin {
                     },
                     'cm-underline': {},
                     'cm-url': {
-                        only_with: [Modifier.Meta],
+                        only_with:
+                            getPlatform() === Platform.Mac
+                                ? [Modifier.Meta]
+                                : [Modifier.Ctrl],
                     },
                 } // TODO: update this
                 const validList = Object.keys(clickable)

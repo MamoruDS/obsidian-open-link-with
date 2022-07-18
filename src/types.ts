@@ -56,6 +56,15 @@ interface ProfileDisplay {
     display?: string
 }
 
+// for overwrite open method of `window`
+interface WindowOLW extends Window {
+    _builtInOpen: (
+        url?: string | URL,
+        target?: string,
+        features?: string
+    ) => Window
+}
+
 type Clickable = Record<
     string,
     {
@@ -86,4 +95,5 @@ export {
     Platform,
     ProfileDisplay,
     ValidModifier,
+    WindowOLW,
 }
