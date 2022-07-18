@@ -49,6 +49,13 @@ interface ProfileDisplay {
     display?: string
 }
 
+type Clickable = Record<
+    string,
+    {
+        popout?: boolean
+    }
+>
+
 type LOG_TYPE = 'info' | 'warn' | 'error'
 
 type ValidModifier =
@@ -62,6 +69,7 @@ export {
     Browser,
     BrowserOptions,
     BrowserProfile,
+    Clickable,
     LOG_TYPE,
     ModifierBinding,
     MouseButton,

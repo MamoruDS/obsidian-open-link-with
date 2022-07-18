@@ -17,6 +17,7 @@ import {
 } from './constant'
 import { openWith, getValidBrowser } from './open'
 import {
+    Clickable,
     ModifierBinding,
     MouseButton,
     Optional,
@@ -91,7 +92,7 @@ export default class OpenLinkPlugin extends Plugin {
                 } else if (shiftKey) {
                     modifier = 'shift'
                 }
-                const url = el.getAttribute('href')
+                const url = el.getAttr('href')
                 const profileName =
                     this.settings.modifierBindings.find(
                         (mb) => {
@@ -108,6 +109,10 @@ export default class OpenLinkPlugin extends Plugin {
                             }
                         }
                     )?.browser ?? this.settings.selected
+                const popupWindow =
+                    el.getAttr('target') === '_blank'
+                        ? true
+                        : false
                 const cmd = this.getOpenCMD(profileName)
                 if (this.settings.enableLog) {
                     log(
@@ -125,6 +130,7 @@ export default class OpenLinkPlugin extends Plugin {
                             mouseEvent: evt,
                             url,
                             profileName,
+                            popupWindow,
                             cmd,
                         }
                     )
@@ -141,7 +147,10 @@ export default class OpenLinkPlugin extends Plugin {
                 if (profileName === BROWSER_IN_APP.val) {
                     this._viewmgr.createView(
                         url,
-                        ViewMode.NEW
+                        ViewMode.NEW,
+                        {
+                            popupWindow,
+                        }
                     )
                     return
                 }
@@ -199,7 +208,7 @@ export default class OpenLinkPlugin extends Plugin {
             }
         )
 
-        const win_cb = (win: Window) => {
+        const winFunc = (win: Window) => {
             const doc = win.document
             const builtInOpen = win.open
             win.open = (url, target, features): Window => {
@@ -224,29 +233,41 @@ export default class OpenLinkPlugin extends Plugin {
                     )
                 }
             }
-            doc.addEventListener('click', (e) => {
-                if (!(e.target instanceof HTMLElement)) {
-                    return
-                }
+            doc.addEventListener('click', (evt) => {
+                const el = evt.target as Element
                 const fakeId = 'fake_extlink'
-                const clickable = [
-                    'external-link',
-                    'clickable-icon',
-                    'cm-underline',
-                ] // TODO: update this
+                const clickable: Clickable = {
+                    'external-link': {},
+                    'clickable-icon': {
+                        popout: true,
+                    },
+                    'cm-underline': {},
+                } // TODO: update this
+                const validList = Object.keys(clickable)
                 let is_clickable = false
-                e.target.classList.forEach((cls) => {
-                    if (clickable.includes(cls)) {
+                let popout = false
+                el.classList.forEach((cls) => {
+                    const _idx = validList.indexOf(cls)
+                    if (_idx != -1) {
                         is_clickable = true
+                        popout = clickable[validList[_idx]]
+                            ?.popout
+                            ? true
+                            : popout
                     }
                 })
                 if (is_clickable) {
                     const fake = doc.getElementById(fakeId)
                     if (fake != null) {
-                        e.preventDefault()
+                        evt.preventDefault()
+                        //
+                        if (popout) {
+                            fake.setAttr('target', '_blank')
+                        }
+                        //
                         const e_cp = new MouseEvent(
-                            e.type,
-                            e
+                            evt.type,
+                            evt
                         )
                         fake.dispatchEvent(e_cp)
                         fake.remove()
@@ -260,7 +281,7 @@ export default class OpenLinkPlugin extends Plugin {
                 }
             })
         }
-        globalWindowFunc(win_cb)
+        globalWindowFunc(winFunc)
 
         this.app.workspace.onLayoutReady(async () => {
             await this._viewmgr.restoreView()
@@ -379,7 +400,8 @@ class SettingTab extends PluginSettingTab {
                 ]
                 let current = browsers.findIndex(
                     ({ val }) =>
-                        val === this.plugin.settings.selected
+                        val ===
+                        this.plugin.settings.selected
                 )
                 if (current !== -1) {
                     browsers.unshift(
