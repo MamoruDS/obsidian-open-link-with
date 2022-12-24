@@ -63,22 +63,23 @@ interface ProfileDisplay {
     display?: string
 }
 
-// for overwrite open method of `window`
-interface WindowOLW extends Window {
+interface MWindow extends Window {
+    mid: string
+    oolwCIDs: string[]
+    oolwPendingUrls: string[]
     _builtInOpen: (
         url?: string | URL,
-        target?: string,
-        features?: string
+        target?: any,
+        features?: any
     ) => Window
 }
 
-type Clickable = Record<
-    string,
-    {
-        popout?: boolean
-        only_with?: Modifier[]
-    }
->
+type Clickable = {
+    is_clickable: boolean
+    url: string | undefined
+    popout: boolean
+    require_modifier?: Modifier[]
+}
 
 type LOG_TYPE = 'info' | 'warn' | 'error'
 
@@ -99,9 +100,9 @@ export {
     Modifier,
     ModifierBinding,
     MouseButton,
+    MWindow,
     Optional,
     Platform,
     ProfileDisplay,
     ValidModifier,
-    WindowOLW,
 }
