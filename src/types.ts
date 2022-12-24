@@ -27,11 +27,14 @@ interface BrowserOptions {
     background: boolean
 }
 
-interface BrowserProfile {
+interface BrowserProfileBase {
     sysCmd?: string
     sysArgs?: string[]
     cmd: string
     args?: string[]
+}
+
+interface BrowserProfile extends BrowserProfileBase {
     optional: Partial<BrowserOptions>
     test: (b: BrowserProfile) => Promise<boolean>
 }
@@ -41,6 +44,10 @@ interface Browser {
     profiles: Partial<
         Record<NodeJS.Platform, BrowserProfile>
     >
+    getExecCommands: (platform: NodeJS.Platform) => {
+        main: string[]
+        private?: string[]
+    }
 }
 
 interface ModifierBinding {
@@ -86,6 +93,7 @@ export {
     Browser,
     BrowserOptions,
     BrowserProfile,
+    BrowserProfileBase,
     Clickable,
     LOG_TYPE,
     Modifier,
