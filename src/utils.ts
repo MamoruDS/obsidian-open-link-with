@@ -24,6 +24,15 @@ class WindowUtils {
             // panic
         }
     }
+    unregisterWindow(win: MWindow) {
+        if (typeof win.mid !== 'undefined') {
+            delete this._windows[win.mid]
+            win.mid = undefined
+        }
+    }
+    getRecords(): Record<string, MWindow> {
+        return this._windows
+    }
     getWindow(mid: string): MWindow {
         return this._windows[mid]
     }
