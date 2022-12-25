@@ -1,9 +1,33 @@
 import {
     LOG_TYPE,
     Modifier,
+    MWindow,
     Platform,
     ValidModifier,
 } from './types'
+
+class WindowUtils {
+    private _windows: Record<string, MWindow>
+    constructor() {
+        this._windows = {}
+    }
+    initWindow(win: MWindow) {
+        win.mid = genRandomStr(8)
+        return win
+    }
+    registerWindow(win: MWindow) {
+        console.info('called registerWindow method')
+        if (typeof win.mid === 'undefined') {
+            win = this.initWindow(win)
+            this._windows[win.mid] = win
+        } else {
+            // panic
+        }
+    }
+    getWindow(mid: string): MWindow {
+        return this._windows[mid]
+    }
+}
 
 const getPlatform = (): Platform => {
     const platform = window.navigator.platform
@@ -88,13 +112,6 @@ const getValidModifiers = (
     }
 }
 
-const globalWindowFunc = (cb: (win: Window) => void) => {
-    cb(activeWindow)
-    app.workspace.on('window-open', (ww, win) => {
-        cb(win)
-    })
-}
-
 const intersection = <T>(...lists: T[][]): T[] => {
     let lhs: T[] = lists.pop()
     while (lists.length) {
@@ -133,7 +150,7 @@ export {
     genRandomStr,
     getValidModifiers,
     getValidHttpURL,
-    globalWindowFunc,
     intersection,
     log,
+    WindowUtils,
 }
