@@ -71,21 +71,9 @@ class Browser implements _Browser {
 
 const getPresetBrowsers = (): Browser[] => {
     const presets: Browser[] = []
-    presets.push(
-        new Browser('safari', PRESET_BROWSERS['safari'])
-    )
-    presets.push(
-        new Browser('firefox', PRESET_BROWSERS['firefox'])
-    )
-    presets.push(
-        new Browser('chrome', PRESET_BROWSERS['chrome'])
-    )
-    presets.push(
-        new Browser('chromium', PRESET_BROWSERS['chromium'])
-    )
-    presets.push(
-        new Browser('edge', PRESET_BROWSERS['edge'])
-    )
+    for (const name of Object.keys(PRESET_BROWSERS)) {
+        presets.push(new Browser(name, PRESET_BROWSERS[name]))
+    }
     return presets
 }
 

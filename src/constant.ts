@@ -204,6 +204,102 @@ const PRESET_BROWSERS = {
             },
         },
     },
+    brave: {
+        darwin: {
+            cmd: path.join(
+                '/Applications',
+                'Brave Browser.app',
+                'Contents',
+                'MacOS',
+                'Brave Browser'
+            ),
+            optional: {
+                private: {
+                    args: ['-incognito'],
+                },
+            },
+            test: async (b) => {
+                return existsSync(b.cmd)
+            },
+        },
+        linux: {
+            cmd: 'brave-browser',
+            optional: {
+                private: {
+                    args: ['-incognito'],
+                },
+            },
+            test: async (b) => {
+                const c = spawnSync('which', [b.cmd])
+                return c.status === 0
+            },
+        },
+        win32: {
+            cmd: path.join(
+                'c:',
+                'Program Files',
+                'BraveSoftware',
+                'Brave-Browser',
+                'Application',
+                'brave.exe'
+            ),
+            optional: {
+                private: {
+                    args: ['-incognito'],
+                },
+            },
+            test: async (b) => {
+                return existsSync(b.cmd)
+            },
+        },
+    },
+    waterfox: {
+        darwin: {
+            cmd: path.join(
+                '/Applications',
+                'Waterfox.app',
+                'Contents',
+                'MacOS',
+                'Waterfox'
+            ),
+            optional: {
+                private: {
+                    args: ['-private-window'],
+                },
+            },
+            test: async (b) => {
+                return existsSync(b.cmd)
+            },
+        },
+        linux: {
+            cmd: 'waterfox',
+            optional: {
+                private: {
+                    args: ['-private-window'],
+                },
+            },
+            test: async (b) => {
+                const c = spawnSync('which', [b.cmd])
+                return c.status === 0
+            },
+        },
+        win32: {
+            cmd: path.join(
+                'c:',
+                'Program Files',
+                'Waterfox',
+                'waterfox.exe'
+            ),
+            optional: {
+                private: {
+                    args: ['-private-window'],
+                },
+            },
+            test: async (b) => {
+                return existsSync(b.cmd)
+            },
+        },
+    },
 } as Record<
     string,
     Partial<Record<NodeJS.Platform, BrowserProfile>>
