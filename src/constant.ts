@@ -28,6 +28,18 @@ const BROWSER_IN_APP_LAST: ProfileDisplay = {
     display: 'in-app view',
 }
 
+const _isExecutableExist = async (
+    fp: string
+): Promise<boolean> => {
+    return existsSync(fp)
+}
+
+const _isExecutableAvailable = async (
+    exec: string
+): Promise<boolean> => {
+    return spawnSync('which', [exec]).status === 0
+}
+
 const PRESET_BROWSERS = {
     safari: {
         darwin: {
@@ -35,7 +47,7 @@ const PRESET_BROWSERS = {
             sysArgs: ['-a'],
             cmd: 'safari',
             optional: {},
-            test: async (b) => {
+            isAvailable: async (b) => {
                 return true
             },
         },
@@ -54,9 +66,8 @@ const PRESET_BROWSERS = {
                     args: ['--private-window'],
                 },
             },
-            test: async (b) => {
-                return existsSync(b.cmd)
-            },
+            isAvailable: async (b) =>
+                _isExecutableExist(b.cmd),
         },
         linux: {
             cmd: 'firefox',
@@ -65,10 +76,8 @@ const PRESET_BROWSERS = {
                     args: ['--private-window'],
                 },
             },
-            test: async (b) => {
-                const c = spawnSync('which', [b.cmd])
-                return c.status === 0
-            },
+            isAvailable: async (b) =>
+                _isExecutableAvailable(b.cmd),
         },
         win32: {
             cmd: path.join(
@@ -82,9 +91,8 @@ const PRESET_BROWSERS = {
                     args: ['--private-window'],
                 },
             },
-            test: async (b) => {
-                return existsSync(b.cmd)
-            },
+            isAvailable: async (b) =>
+                _isExecutableExist(b.cmd),
         },
     },
     chrome: {
@@ -101,9 +109,8 @@ const PRESET_BROWSERS = {
                     args: ['-incognito'],
                 },
             },
-            test: async (b) => {
-                return existsSync(b.cmd)
-            },
+            isAvailable: async (b) =>
+                _isExecutableExist(b.cmd),
         },
         linux: {
             cmd: 'google-chrome',
@@ -112,10 +119,8 @@ const PRESET_BROWSERS = {
                     args: ['-incognito'],
                 },
             },
-            test: async (b) => {
-                const c = spawnSync('which', [b.cmd])
-                return c.status === 0
-            },
+            isAvailable: async (b) =>
+                _isExecutableAvailable(b.cmd),
         },
         win32: {
             cmd: path.join(
@@ -131,9 +136,8 @@ const PRESET_BROWSERS = {
                     args: ['-incognito'],
                 },
             },
-            test: async (b) => {
-                return existsSync(b.cmd)
-            },
+            isAvailable: async (b) =>
+                _isExecutableExist(b.cmd),
         },
     },
     chromium: {
@@ -150,9 +154,8 @@ const PRESET_BROWSERS = {
                     args: ['-incognito'],
                 },
             },
-            test: async (b) => {
-                return existsSync(b.cmd)
-            },
+            isAvailable: async (b) =>
+                _isExecutableExist(b.cmd),
         },
         linux: {
             cmd: 'chromium-browser',
@@ -161,10 +164,8 @@ const PRESET_BROWSERS = {
                     args: ['-incognito'],
                 },
             },
-            test: async (b) => {
-                const c = spawnSync('which', [b.cmd])
-                return c.status === 0
-            },
+            isAvailable: async (b) =>
+                _isExecutableAvailable(b.cmd),
         },
     },
     edge: {
@@ -181,9 +182,8 @@ const PRESET_BROWSERS = {
                     args: ['-inprivate'],
                 },
             },
-            test: async (b) => {
-                return existsSync(b.cmd)
-            },
+            isAvailable: async (b) =>
+                _isExecutableExist(b.cmd),
         },
         win32: {
             cmd: path.join(
@@ -199,9 +199,8 @@ const PRESET_BROWSERS = {
                     args: ['-inprivate'],
                 },
             },
-            test: async (b) => {
-                return existsSync(b.cmd)
-            },
+            isAvailable: async (b) =>
+                _isExecutableExist(b.cmd),
         },
     },
     brave: {
@@ -218,9 +217,8 @@ const PRESET_BROWSERS = {
                     args: ['-incognito'],
                 },
             },
-            test: async (b) => {
-                return existsSync(b.cmd)
-            },
+            isAvailable: async (b) =>
+                _isExecutableExist(b.cmd),
         },
         linux: {
             cmd: 'brave-browser',
@@ -229,10 +227,8 @@ const PRESET_BROWSERS = {
                     args: ['-incognito'],
                 },
             },
-            test: async (b) => {
-                const c = spawnSync('which', [b.cmd])
-                return c.status === 0
-            },
+            isAvailable: async (b) =>
+                _isExecutableAvailable(b.cmd),
         },
         win32: {
             cmd: path.join(
@@ -248,9 +244,8 @@ const PRESET_BROWSERS = {
                     args: ['-incognito'],
                 },
             },
-            test: async (b) => {
-                return existsSync(b.cmd)
-            },
+            isAvailable: async (b) =>
+                _isExecutableExist(b.cmd),
         },
     },
     waterfox: {
@@ -267,9 +262,8 @@ const PRESET_BROWSERS = {
                     args: ['-private-window'],
                 },
             },
-            test: async (b) => {
-                return existsSync(b.cmd)
-            },
+            isAvailable: async (b) =>
+                _isExecutableExist(b.cmd),
         },
         linux: {
             cmd: 'waterfox',
@@ -278,10 +272,8 @@ const PRESET_BROWSERS = {
                     args: ['-private-window'],
                 },
             },
-            test: async (b) => {
-                const c = spawnSync('which', [b.cmd])
-                return c.status === 0
-            },
+            isAvailable: async (b) =>
+                _isExecutableAvailable(b.cmd),
         },
         win32: {
             cmd: path.join(
@@ -295,9 +287,8 @@ const PRESET_BROWSERS = {
                     args: ['-private-window'],
                 },
             },
-            test: async (b) => {
-                return existsSync(b.cmd)
-            },
+            isAvailable: async (b) =>
+                _isExecutableExist(b.cmd),
         },
     },
 } as Record<

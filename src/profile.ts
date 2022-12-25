@@ -92,8 +92,8 @@ class ProfileMgr {
             let app = profiles[os]
             if (
                 typeof app !== 'undefined' &&
-                app.test &&
-                (await app.test(app))
+                app.isAvailable &&
+                (await app.isAvailable(app))
             ) {
                 this._preset_browser.push(browser)
             }

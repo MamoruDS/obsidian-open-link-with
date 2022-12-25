@@ -23,7 +23,7 @@ enum MouseButton {
 }
 
 interface BrowserOptions {
-    private: Partial<Omit<BrowserProfile, 'optional'>>
+    private: Partial<Omit<BrowserProfileBase, 'optional'>>
     background: boolean
 }
 
@@ -36,7 +36,7 @@ interface BrowserProfileBase {
 
 interface BrowserProfile extends BrowserProfileBase {
     optional: Partial<BrowserOptions>
-    test: (b: BrowserProfile) => Promise<boolean>
+    isAvailable: (b: BrowserProfile) => Promise<boolean>
 }
 
 interface Browser {
