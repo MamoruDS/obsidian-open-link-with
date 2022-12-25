@@ -7,6 +7,8 @@ import {
     PluginSettingTab,
     Setting,
 } from 'obsidian'
+
+import { ClickUtils } from './click'
 import {
     BROWSER_SYSTEM,
     BROWSER_GLOBAL,
@@ -15,27 +17,25 @@ import {
     MODIFIER_TEXT,
     MODIFIER_TEXT_FALLBACK,
 } from './constant'
-import { openWith, getValidBrowser } from './open'
+import { openWith } from './open'
+import { ProfileMgr } from './profile'
 import {
-    Clickable,
     Modifier,
     ModifierBinding,
     MouseButton,
+    MWindow,
     Optional,
     Platform,
     ProfileDisplay,
     ValidModifier,
-    WindowOLW,
 } from './types'
 import {
     genRandomStr,
     getModifiersFromMouseEvt,
     getPlatform,
-    getValidHttpURL,
     getValidModifiers,
-    globalWindowFunc,
-    intersection,
     log,
+    WindowUtils,
 } from './utils'
 import { ViewMgr, ViewMode, ViewRec } from './view'
 
@@ -59,17 +59,13 @@ const DEFAULT_SETTINGS: PluginSettings = {
 
 export default class OpenLinkPlugin extends Plugin {
     settings: PluginSettings
-    presetProfiles: Record<string, string[]>
+    _profile: ProfileMgr
     _viewmgr: ViewMgr
-    get profiles(): Record<string, string[]> {
-        return {
-            ...this.presetProfiles,
-            ...this.settings.custom,
-        }
-    }
     async onload() {
         this._viewmgr = new ViewMgr(this)
         await this.loadSettings()
+        this._profile = new ProfileMgr()
+        await this._profile.loadValidPresetBrowsers()
         const extLinkClick = async (
             evt: MouseEvent,
             validClassName: string,
@@ -77,240 +73,166 @@ export default class OpenLinkPlugin extends Plugin {
                 allowedButton?: MouseButton
             } = {}
         ): Promise<void> => {
-            const win = activeWindow as WindowOLW
+            const win = activeWindow as MWindow
             const el = evt.target as Element
-            if (el.classList.contains(validClassName)) {
-                const {
-                    button,
-                    altKey,
-                    ctrlKey,
-                    metaKey,
-                    shiftKey,
-                } = evt
-                let modifier: ValidModifier = 'none'
-                if (altKey) {
-                    modifier = 'alt'
-                } else if (ctrlKey) {
-                    modifier = 'ctrl'
-                } else if (metaKey) {
-                    modifier = 'meta'
-                } else if (shiftKey) {
-                    modifier = 'shift'
-                }
-                const url = el.getAttr('href')
-                const profileName =
-                    this.settings.modifierBindings.find(
-                        (mb) => {
-                            if (
-                                mb.auxClickOnly &&
-                                button !=
-                                    MouseButton.Auxiliary
-                            ) {
-                                return false
-                            } else {
-                                return (
-                                    mb.modifier === modifier
-                                )
-                            }
-                        }
-                    )?.browser ?? this.settings.selected
-                const popupWindow =
-                    el.getAttr('target') === '_blank'
-                        ? true
-                        : false
-                const cmd = this.getOpenCMD(profileName)
-                if (this.settings.enableLog) {
-                    log(
-                        'info',
-                        'external link clicked...',
-                        {
-                            click: {
-                                button,
-                                altKey,
-                                ctrlKey,
-                                metaKey,
-                                shiftKey,
-                            },
-                            modifier,
-                            mouseEvent: evt,
-                            url,
-                            profileName,
-                            popupWindow,
-                            cmd,
-                        }
-                    )
-                }
-                // right click trigger (windows only)
-                if (
-                    typeof options.allowedButton !=
-                        'undefined' &&
-                    button != options.allowedButton
-                ) {
-                    return
-                }
-                // in-app view
-                if (profileName === BROWSER_IN_APP.val) {
-                    this._viewmgr.createView(
-                        url,
-                        ViewMode.NEW,
-                        {
-                            popupWindow,
-                        }
-                    )
-                    return
-                }
-                if (
-                    profileName === BROWSER_IN_APP_LAST.val
-                ) {
-                    this._viewmgr.createView(
-                        url,
-                        ViewMode.LAST
-                    )
-                    return
-                }
-                if (typeof cmd !== 'undefined') {
-                    evt.preventDefault()
-                    const code = await openWith(url, cmd, {
-                        enableLog: this.settings.enableLog,
-                        timeout: this.settings.timeout,
-                    })
-                    if (code !== 0) {
-                        if (this.settings.enableLog) {
-                            log(
-                                'error',
-                                'failed to open',
-                                `'spawn' exited with code ${code} when ` +
-                                    `trying to open an external link with ${profileName}.`
-                            )
-                        }
-                        win._builtInOpen(url)
-                    }
+            if (!el.classList.contains(validClassName)) {
+                return
+            }
+            const oolwCID = el.getAttribute('oolw-cid')
+            if (typeof oolwCID !== 'undefined') {
+                if (win.oolwCIDs.contains(oolwCID)) {
+                    return // FIXME: prevent double click
                 } else {
-                    win._builtInOpen(url)
+                    win.oolwCIDs.push(oolwCID)
+                    setTimeout(() => {
+                        win.oolwCIDs.remove(oolwCID)
+                    }, 10)
                 }
             }
+            const {
+                button,
+                altKey,
+                ctrlKey,
+                metaKey,
+                shiftKey,
+            } = evt
+            let modifier: ValidModifier = 'none'
+            if (altKey) {
+                modifier = 'alt'
+            } else if (ctrlKey) {
+                modifier = 'ctrl'
+            } else if (metaKey) {
+                modifier = 'meta'
+            } else if (shiftKey) {
+                modifier = 'shift'
+            }
+            const url = el.getAttr('href')
+            const profileName =
+                this.settings.modifierBindings.find(
+                    (mb) => {
+                        if (
+                            mb.auxClickOnly &&
+                            button != MouseButton.Auxiliary
+                        ) {
+                            return false
+                        } else {
+                            return mb.modifier === modifier
+                        }
+                    }
+                )?.browser ?? this.settings.selected
+            const popupWindow =
+                el.getAttr('target') === '_blank'
+                    ? true
+                    : false
+            const cmd = this.getOpenCMD(profileName)
+            if (this.settings.enableLog) {
+                log('info', 'external link clicked...', {
+                    click: {
+                        button,
+                        altKey,
+                        ctrlKey,
+                        metaKey,
+                        shiftKey,
+                    },
+                    el,
+                    modifier,
+                    mouseEvent: evt,
+                    win: evt.doc.win,
+                    mid: (evt.doc.win as MWindow).mid,
+                    url,
+                    profileName,
+                    popupWindow,
+                    cmd,
+                })
+            }
+            // right click trigger (windows only)
+            if (
+                typeof options.allowedButton !=
+                    'undefined' &&
+                button != options.allowedButton
+            ) {
+                return
+            }
+            // in-app view
+            if (profileName === BROWSER_IN_APP.val) {
+                this._viewmgr.createView(
+                    url,
+                    ViewMode.NEW,
+                    {
+                        popupWindow,
+                    }
+                )
+                return
+            }
+            if (profileName === BROWSER_IN_APP_LAST.val) {
+                this._viewmgr.createView(
+                    url,
+                    ViewMode.LAST,
+                    {
+                        popupWindow,
+                    }
+                )
+                return
+            }
+            if (typeof cmd !== 'undefined') {
+                evt.preventDefault()
+                const code = await openWith(url, cmd, {
+                    enableLog: this.settings.enableLog,
+                    timeout: this.settings.timeout,
+                })
+                if (code !== 0) {
+                    if (this.settings.enableLog) {
+                        log(
+                            'error',
+                            'failed to open',
+                            `'spawn' exited with code ${code} when ` +
+                                `trying to open an external link with ${profileName}.`
+                        )
+                    }
+                    win._builtInOpen(url)
+                }
+            } else {
+                win._builtInOpen(url)
+            }
         }
-        this.presetProfiles = await getValidBrowser()
+        //
         this.addSettingTab(new SettingTab(this.app, this))
-        this.registerDomEvent(
-            document,
-            'click',
-            (evt: MouseEvent) => {
+        //
+        const windowsUtils = new WindowUtils()
+        const clickutils = new ClickUtils(windowsUtils)
+        const initWindow = (win: MWindow) => {
+            windowsUtils.registerWindow(win)
+            clickutils.overrideDefaultWindowOpen(win, true)
+            clickutils.initDocClickHandler(win)
+            this.registerDomEvent(win, 'click', (evt) => {
                 return extLinkClick(
                     evt,
-                    'fake-external-link',
+                    'oolw-external-link-dummy',
                     {
                         allowedButton: MouseButton.Main,
                     }
                 )
-            }
-        )
-        this.registerDomEvent(
-            document,
-            'auxclick',
-            (evt: MouseEvent) => {
-                return extLinkClick(evt, 'external-link', {
-                    allowedButton: MouseButton.Auxiliary,
-                })
-            }
-        )
-
-        const winFunc = (win: WindowOLW) => {
-            const doc = win.document
-            win._builtInOpen = win.open
-            win.open = (url, target, features): Window => {
-                const validURL = getValidHttpURL(url)
-                if (validURL !== null) {
-                    const fakeID = 'fake_extlink'
-                    let fake = doc.getElementById(fakeID)
-                    if (fake === null) {
-                        fake = doc.createElement('span')
-                        fake.classList.add(
-                            'fake-external-link'
-                        )
-                        fake.setAttribute('id', fakeID)
-                        doc.body.append(fake)
-                    }
-                    fake.setAttr('href', `${validURL}`)
-                } else {
-                    return win._builtInOpen(
-                        url,
-                        target,
-                        features
+            })
+            this.registerDomEvent(
+                win,
+                'auxclick',
+                (evt) => {
+                    return extLinkClick(
+                        evt,
+                        'oolw-external-link-dummy',
+                        {
+                            allowedButton:
+                                MouseButton.Auxiliary,
+                        }
                     )
                 }
-            }
-            doc.addEventListener('click', (evt) => {
-                const el = evt.target as Element
-                const fakeId = 'fake_extlink'
-                const modifiers =
-                    getModifiersFromMouseEvt(evt)
-                const clickable: Clickable = {
-                    'external-link': {},
-                    'clickable-icon': {
-                        popout: true,
-                    },
-                    'cm-underline': {},
-                    'cm-url': {
-                        only_with:
-                            getPlatform() === Platform.Mac
-                                ? [Modifier.Meta]
-                                : [Modifier.Ctrl],
-                    },
-                } // TODO: update this
-                const validList = Object.keys(clickable)
-                let is_clickable = false
-                let popout = false
-                el.classList.forEach((cls) => {
-                    const _idx = validList.indexOf(cls)
-                    if (_idx != -1) {
-                        const clickOpt =
-                            clickable[validList[_idx]]
-                        // Clickable.only_with
-                        if (
-                            typeof clickOpt.only_with !==
-                                'undefined' &&
-                            intersection(
-                                modifiers,
-                                clickOpt.only_with
-                            ).length === 0
-                        ) {
-                            return
-                        }
-                        // Clickable.popout
-                        popout = clickOpt?.popout
-                            ? true
-                            : popout
-                        is_clickable = true
-                    }
-                })
-                if (is_clickable) {
-                    const fake = doc.getElementById(fakeId)
-                    if (fake != null) {
-                        evt.preventDefault()
-                        //
-                        if (popout) {
-                            fake.setAttr('target', '_blank')
-                        }
-                        //
-                        const e_cp = new MouseEvent(
-                            evt.type,
-                            evt
-                        )
-                        fake.dispatchEvent(e_cp)
-                        fake.remove()
-                    } else {
-                        console.error(
-                            '[open-link-with] fake-el with "' +
-                                fakeId +
-                                '" not found'
-                        )
-                    }
-                }
-            })
+            )
         }
-        globalWindowFunc(winFunc)
-
+        initWindow(activeWindow as MWindow)
+        this.app.workspace.on('window-open', (ww, win) => {
+            initWindow(win as MWindow)
+        })
+        //
         this.app.workspace.onLayoutReady(async () => {
             await this._viewmgr.restoreView()
             if (this.settings.enableLog) {
@@ -342,7 +264,9 @@ export default class OpenLinkPlugin extends Plugin {
         if (val === BROWSER_GLOBAL.val) {
             val = this.settings.selected
         }
-        return this.profiles[val]
+        return this._profile.getBrowsersCMD(
+            this.settings.custom
+        )[val]
     }
 }
 
@@ -364,8 +288,8 @@ class PanicModal extends Modal {
 
 class SettingTab extends PluginSettingTab {
     plugin: OpenLinkPlugin
-    _profileChangeHandler: Debouncer<string[]>
-    _timeoutChangeHandler: Debouncer<string[]>
+    _profileChangeHandler: Debouncer<string[], undefined>
+    _timeoutChangeHandler: Debouncer<string[], undefined>
     constructor(app: App, plugin: OpenLinkPlugin) {
         super(app, plugin)
         this.plugin = plugin
@@ -421,7 +345,9 @@ class SettingTab extends PluginSettingTab {
                     BROWSER_IN_APP_LAST,
                     BROWSER_IN_APP,
                     ...Object.keys(
-                        this.plugin.profiles
+                        this.plugin._profile.getBrowsersCMD(
+                            this.plugin.settings.custom
+                        )
                     ).map((b) => {
                         return { val: b }
                     }),
@@ -496,7 +422,9 @@ class SettingTab extends PluginSettingTab {
                     BROWSER_IN_APP_LAST,
                     BROWSER_IN_APP,
                     ...Object.keys(
-                        this.plugin.profiles
+                        this.plugin._profile.getBrowsersCMD(
+                            this.plugin.settings.custom
+                        )
                     ).map((b) => {
                         return { val: b }
                     }),
