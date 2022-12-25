@@ -203,9 +203,9 @@ class ClickUtils {
             enabled &&
             typeof win._builtInOpen === 'undefined'
         ) {
-            win._builtInOpen = window.open
-            win.oolwPendingUrls = []
+            win._builtInOpen = win.open
             win.oolwCIDs = []
+            win.oolwPendingUrls = []
             win.open = (url, target, feature) => {
                 const validUrl = getValidHttpURL(url)
                 if (validUrl === null) {
@@ -223,9 +223,10 @@ class ClickUtils {
             !enabled &&
             typeof win._builtInOpen !== 'undefined'
         ) {
-            window.open = win._builtInOpen
-            delete win.oolwPendingUrls
+            win.open = win._builtInOpen
             delete win._builtInOpen
+            delete win.oolwCIDs
+            delete win.oolwPendingUrls
         }
     }
     // TODO:
