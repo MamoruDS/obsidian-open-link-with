@@ -59,7 +59,9 @@ const DEFAULT_SETTINGS: PluginSettings = {
 
 export default class OpenLinkPlugin extends Plugin {
     settings: PluginSettings
+    _clickUtils?: ClickUtils
     _profile: ProfileMgr
+    _windowUtils?: WindowUtils
     _viewmgr: ViewMgr
     async onload() {
         this._viewmgr = new ViewMgr(this)
@@ -198,12 +200,15 @@ export default class OpenLinkPlugin extends Plugin {
         //
         this.addSettingTab(new SettingTab(this.app, this))
         //
-        const windowsUtils = new WindowUtils()
-        const clickutils = new ClickUtils(windowsUtils)
+        this._windowUtils = new WindowUtils()
+        this._clickUtils = new ClickUtils(this._windowUtils)
         const initWindow = (win: MWindow) => {
-            windowsUtils.registerWindow(win)
-            clickutils.overrideDefaultWindowOpen(win, true)
-            clickutils.initDocClickHandler(win)
+            this._windowUtils.registerWindow(win)
+            this._clickUtils.overrideDefaultWindowOpen(
+                win,
+                true
+            )
+            this._clickUtils.initDocClickHandler(win)
             this.registerDomEvent(win, 'click', (evt) => {
                 return extLinkClick(
                     evt,
@@ -243,6 +248,29 @@ export default class OpenLinkPlugin extends Plugin {
                 )
             }
         })
+    }
+    async onunload(): Promise<void> {
+        if (typeof this._windowUtils !== 'undefined') {
+            Object.keys(
+                this._windowUtils.getRecords()
+            ).forEach((mid) => {
+                const win = this._windowUtils.getWindow(mid)
+                if (
+                    typeof this._clickUtils !== 'undefined'
+                ) {
+                    this._clickUtils.removeDocClickHandler(
+                        win
+                    )
+                    this._clickUtils.overrideDefaultWindowOpen(
+                        win,
+                        false
+                    )
+                }
+                this._windowUtils.unregisterWindow(win)
+            })
+            delete this._clickUtils
+            delete this._windowUtils
+        }
     }
     async loadSettings() {
         this.settings = Object.assign(
