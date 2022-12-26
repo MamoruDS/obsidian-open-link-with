@@ -114,7 +114,7 @@ export default class OpenLinkPlugin extends Plugin {
             const profileName = matchedMB?.browser ?? this.settings.selected
             const popupWindow =
                 el.getAttr('target') === '_blank' ? true : false
-            const cmd = this.getOpenCMD(profileName)
+            const cmd = this._getOpenCMD(profileName)
             if (this.settings.enableLog) {
                 log('info', 'external link clicked...', {
                     click: {
@@ -204,6 +204,9 @@ export default class OpenLinkPlugin extends Plugin {
         this.app.workspace.on('window-open', (ww, win) => {
             initWindow(win as MWindow)
         })
+        this.app.workspace.on('window-close', (ww, win) => {
+            this._oolwUnloadWindow(win as MWindow)
+        })
         //
         this.app.workspace.onLayoutReady(async () => {
             await this._viewmgr.restoreView()
@@ -215,12 +218,7 @@ export default class OpenLinkPlugin extends Plugin {
     async onunload(): Promise<void> {
         if (typeof this._windowUtils !== 'undefined') {
             Object.keys(this._windowUtils.getRecords()).forEach((mid) => {
-                const win = this._windowUtils.getWindow(mid)
-                if (typeof this._clickUtils !== 'undefined') {
-                    this._clickUtils.removeDocClickHandler(win)
-                    this._clickUtils.overrideDefaultWindowOpen(win, false)
-                }
-                this._windowUtils.unregisterWindow(win)
+                this._oolwUnloadWindowByMID(mid)
             })
             delete this._clickUtils
             delete this._windowUtils
@@ -239,7 +237,7 @@ export default class OpenLinkPlugin extends Plugin {
         }
         await this.saveData(this.settings)
     }
-    getOpenCMD(val: string): Optional<string[]> {
+    _getOpenCMD(val: string): Optional<string[]> {
         if (val === BROWSER_SYSTEM.val) {
             return undefined
         }
@@ -247,6 +245,23 @@ export default class OpenLinkPlugin extends Plugin {
             val = this.settings.selected
         }
         return this._profile.getBrowsersCMD(this.settings.custom)[val]
+    }
+    _oolwUnloadWindow(win: MWindow) {
+        if (typeof this._clickUtils !== 'undefined') {
+            this._clickUtils.removeDocClickHandler(win)
+            this._clickUtils.overrideDefaultWindowOpen(win, false)
+        }
+        if (typeof this._windowUtils !== 'undefined') {
+            this._windowUtils.unregisterWindow(win)
+        }
+    }
+    _oolwUnloadWindowByMID(mid: string) {
+        if (typeof this._windowUtils !== 'undefined') {
+            const win = this._windowUtils.getWindow(mid)
+            if (typeof win !== 'undefined') {
+                this._oolwUnloadWindow(win)
+            }
+        }
     }
 }
 
