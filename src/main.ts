@@ -109,7 +109,7 @@ export default class OpenLinkPlugin extends Plugin {
                 modifier = 'shift'
             }
             const url = el.getAttr('href')
-            const profileName =
+            const matchedMB: ModifierBinding | undefined =
                 this.settings.modifierBindings.find(
                     (mb) => {
                         if (
@@ -121,7 +121,9 @@ export default class OpenLinkPlugin extends Plugin {
                             return mb.modifier === modifier
                         }
                     }
-                )?.browser ?? this.settings.selected
+                )
+            const profileName =
+                matchedMB?.browser ?? this.settings.selected
             const popupWindow =
                 el.getAttr('target') === '_blank'
                     ? true
@@ -157,21 +159,25 @@ export default class OpenLinkPlugin extends Plugin {
             }
             // in-app view
             if (profileName === BROWSER_IN_APP.val) {
+                evt.preventDefault()
                 this._viewmgr.createView(
                     url,
                     ViewMode.NEW,
                     {
                         popupWindow,
+                        focus: matchedMB?.focusOnView,
                     }
                 )
                 return
             }
             if (profileName === BROWSER_IN_APP_LAST.val) {
+                evt.preventDefault()
                 this._viewmgr.createView(
                     url,
                     ViewMode.LAST,
                     {
                         popupWindow,
+                        focus: matchedMB?.focusOnView,
                     }
                 )
                 return
@@ -424,6 +430,7 @@ class SettingTab extends PluginSettingTab {
                             id: genRandomStr(6),
                             platform: Platform.Unknown,
                             modifier: 'none',
+                            focusOnView: true,
                             auxClickOnly: true,
                         }
                     )
@@ -472,61 +479,91 @@ class SettingTab extends PluginSettingTab {
                         (m) => m.id === mb.id
                     ).browser = browser
                     await this.plugin.saveSettings()
+                    this._render()
                 })
             })
-                .addToggle((toggle) => {
-                    toggle.setValue(mb.auxClickOnly)
-                    toggle.setTooltip(
-                        'Triggered on middle mouse button click only'
+            kb.addToggle((toggle) => {
+                toggle.toggleEl.setAttribute(
+                    'id',
+                    'oolw-aux-click-toggle'
+                )
+                toggle.setValue(mb.auxClickOnly)
+                toggle.setTooltip(
+                    'Triggers on middle mouse button click only'
+                )
+                toggle.onChange(async (val) => {
+                    this.plugin.settings.modifierBindings.find(
+                        (m) => m.id === mb.id
+                    ).auxClickOnly = val
+                    await this.plugin.saveSettings()
+                })
+            })
+            kb.addToggle((toggle) => {
+                toggle.toggleEl.setAttribute(
+                    'id',
+                    'oolw-view-focus-toggle'
+                )
+                if (
+                    mb.browser === BROWSER_IN_APP.val ||
+                    mb.browser === BROWSER_IN_APP_LAST.val
+                ) {
+                    toggle.setDisabled(false)
+                    toggle.setValue(mb.focusOnView)
+                } else {
+                    toggle.toggleEl.setAttribute(
+                        'style',
+                        'opacity:0.2'
                     )
-                    toggle.onChange(async (val) => {
+                    toggle.setDisabled(true)
+                    toggle.setValue(false)
+                }
+                toggle.setTooltip(
+                    'Focus on view after opening/updating (in-app browser only)'
+                )
+                toggle.onChange(async (val) => {
+                    this.plugin.settings.modifierBindings.find(
+                        (m) => m.id === mb.id
+                    ).focusOnView = val
+                    await this.plugin.saveSettings()
+                })
+            })
+            kb.addDropdown((dd) => {
+                const platform = getPlatform()
+                getValidModifiers(platform).forEach((m) => {
+                    dd.addOption(
+                        m,
+                        {
+                            ...MODIFIER_TEXT_FALLBACK,
+                            ...MODIFIER_TEXT[platform],
+                        }[m]
+                    )
+                })
+                dd.setValue(mb.modifier)
+                dd.onChange(
+                    async (modifier: ValidModifier) => {
                         this.plugin.settings.modifierBindings.find(
                             (m) => m.id === mb.id
-                        ).auxClickOnly = val
+                        ).modifier = modifier
                         await this.plugin.saveSettings()
-                    })
-                })
-                .addDropdown((dd) => {
-                    const platform = getPlatform()
-                    getValidModifiers(platform).forEach(
-                        (m) => {
-                            dd.addOption(
-                                m,
-                                {
-                                    ...MODIFIER_TEXT_FALLBACK,
-                                    ...MODIFIER_TEXT[
-                                        platform
-                                    ],
-                                }[m]
-                            )
-                        }
-                    )
-                    dd.setValue(mb.modifier)
-                    dd.onChange(
-                        async (modifier: ValidModifier) => {
-                            this.plugin.settings.modifierBindings.find(
-                                (m) => m.id === mb.id
-                            ).modifier = modifier
-                            await this.plugin.saveSettings()
-                        }
-                    )
-                })
-                .addButton((btn) => {
-                    btn.setButtonText('Remove')
-                    btn.setClass('mod-warning')
-                    btn.onClick(async (_) => {
-                        const idx =
-                            this.plugin.settings.modifierBindings.findIndex(
-                                (m) => m.id === mb.id
-                            )
-                        this.plugin.settings.modifierBindings.splice(
-                            idx,
-                            1
+                    }
+                )
+            })
+            kb.addButton((btn) => {
+                btn.setButtonText('Remove')
+                btn.setClass('mod-warning')
+                btn.onClick(async (_) => {
+                    const idx =
+                        this.plugin.settings.modifierBindings.findIndex(
+                            (m) => m.id === mb.id
                         )
-                        await this.plugin.saveSettings()
-                        this._render()
-                    })
+                    this.plugin.settings.modifierBindings.splice(
+                        idx,
+                        1
+                    )
+                    await this.plugin.saveSettings()
+                    this._render()
                 })
+            })
             kb.controlEl.setAttr(
                 'style',
                 'justify-content: space-between !important;'
