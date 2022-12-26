@@ -23,6 +23,11 @@ class InAppView extends ItemView {
         super(leaf)
         this.url = url
         this.title = new URL(url).host
+        // TODO: remove this after tab title issue is fixed
+        this.leaf.setPinned(true)
+        setTimeout(() => {
+            this.leaf.setPinned(false)
+        }, 10)
     }
     async onOpen(): Promise<void> {
         this.frame = document.createElement('iframe')
@@ -80,6 +85,7 @@ class ViewMgr {
         url: string,
         mode: ViewMode,
         options: {
+            focus?: boolean
             popupWindow?: boolean // using popout-win will overwrite mode
         } = {}
     ): Promise<string> {
@@ -93,7 +99,7 @@ class ViewMgr {
             return this._getLeafId(leaf)
         }
         let id: string = undefined
-        if (options.popupWindow) {
+        if (options.popupWindow ?? false) {
             mode = ViewMode.NEW
             const leaf =
                 this.plugin.app.workspace.openPopoutLeaf()
@@ -113,12 +119,18 @@ class ViewMgr {
                 id = rec?.leafId ?? getNewLeafId()
             }
         }
-        return await this.updateView(id, url, mode)
+        return await this.updateView(
+            id,
+            url,
+            mode,
+            options?.focus
+        )
     }
     async updateView(
         leafId: string,
         url: string,
-        mode: ViewMode
+        mode: ViewMode,
+        focus: boolean = true
     ): Promise<string | null> {
         const leaf =
             this.plugin.app.workspace.getLeafById(leafId)
@@ -143,6 +155,11 @@ class ViewMgr {
                 })
             }
             await this.plugin.saveSettings()
+            if (focus) {
+                this.plugin.app.workspace.setActiveLeaf(
+                    leaf
+                )
+            }
             return leafId
         }
     }
@@ -154,7 +171,8 @@ class ViewMgr {
                 (await this.updateView(
                     rec.leafId,
                     rec.url,
-                    rec.mode
+                    rec.mode,
+                    false
                 )) !== null
             ) {
                 restored.push(rec)
