@@ -116,7 +116,7 @@ export default class OpenLinkPlugin extends Plugin {
                 el.getAttr('target') === '_blank' ? true : false
             const cmd = this._getOpenCMD(profileName)
             if (this.settings.enableLog) {
-                log('info', 'external link clicked...', {
+                log('info', 'click event (extLinkClick)', {
                     click: {
                         button,
                         altKey,

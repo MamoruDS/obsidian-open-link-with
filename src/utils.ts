@@ -10,17 +10,22 @@ class WindowUtils {
         return win
     }
     registerWindow(win: MWindow) {
-        console.info('called registerWindow method')
         if (typeof win.mid === 'undefined') {
             win = this.initWindow(win)
+            log('info', 'window registered', { mid: win.mid, window: win })
             this._windows[win.mid] = win
         } else {
             // panic
+            // log('warn', 'existing window registered', {
+            //     mid: win.mid,
+            //     window: win,
+            // })
         }
     }
     unregisterWindow(win: MWindow) {
         if (typeof win.mid !== 'undefined') {
             delete this._windows[win.mid]
+            log('info', 'window unregistered', { mid: win.mid, window: win })
             win.mid = undefined
         }
     }
@@ -114,20 +119,15 @@ const intersection = <T>(...lists: T[][]): T[] => {
 }
 
 const log = (level: LogLevels, title: string, message: any) => {
-    let wrapper: (msg: string) => any
+    let logger: (...args: any[]) => any
     if (level === 'warn') {
-        wrapper = console.warn
+        logger = console.warn
     } else if (level === 'error') {
-        wrapper = console.error
+        logger = console.error
     } else {
-        wrapper = console.info
+        logger = console.info
     }
-    if (typeof message === 'string') {
-        wrapper('[open-link-with] ' + title + ':\n' + message)
-    } else {
-        wrapper('[open-link-with] ' + title)
-        wrapper(message)
-    }
+    logger(`[open-link-with] ${title}`, message)
 }
 
 export {
