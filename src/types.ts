@@ -41,9 +41,7 @@ interface BrowserProfile extends BrowserProfileBase {
 
 interface Browser {
     name: string
-    profiles: Partial<
-        Record<NodeJS.Platform, BrowserProfile>
-    >
+    profiles: Partial<Record<NodeJS.Platform, BrowserProfile>>
     getExecCommands: (platform: NodeJS.Platform) => {
         main: string[]
         private?: string[]
@@ -55,6 +53,7 @@ interface ModifierBinding {
     browser?: string
     platform: Platform
     modifier: ValidModifier
+    focusOnView: boolean
     auxClickOnly: boolean
 }
 
@@ -67,11 +66,7 @@ interface MWindow extends Window {
     mid: string
     oolwCIDs: string[]
     oolwPendingUrls: string[]
-    _builtInOpen: (
-        url?: string | URL,
-        target?: any,
-        features?: any
-    ) => Window
+    _builtInOpen: (url?: string | URL, target?: any, features?: any) => Window
 }
 
 type Clickable = {
@@ -81,14 +76,9 @@ type Clickable = {
     require_modifier?: Modifier[]
 }
 
-type LOG_TYPE = 'info' | 'warn' | 'error'
+type LogLevels = 'info' | 'warn' | 'error'
 
-type ValidModifier =
-    | 'none'
-    | 'ctrl'
-    | 'meta'
-    | 'alt'
-    | 'shift'
+type ValidModifier = 'none' | 'ctrl' | 'meta' | 'alt' | 'shift'
 
 export {
     Browser,
@@ -96,7 +86,7 @@ export {
     BrowserProfile,
     BrowserProfileBase,
     Clickable,
-    LOG_TYPE,
+    LogLevels,
     Modifier,
     ModifierBinding,
     MouseButton,

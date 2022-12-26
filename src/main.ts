@@ -91,13 +91,7 @@ export default class OpenLinkPlugin extends Plugin {
                     }, 10)
                 }
             }
-            const {
-                button,
-                altKey,
-                ctrlKey,
-                metaKey,
-                shiftKey,
-            } = evt
+            const { button, altKey, ctrlKey, metaKey, shiftKey } = evt
             let modifier: ValidModifier = 'none'
             if (altKey) {
                 modifier = 'alt'
@@ -110,24 +104,16 @@ export default class OpenLinkPlugin extends Plugin {
             }
             const url = el.getAttr('href')
             const matchedMB: ModifierBinding | undefined =
-                this.settings.modifierBindings.find(
-                    (mb) => {
-                        if (
-                            mb.auxClickOnly &&
-                            button != MouseButton.Auxiliary
-                        ) {
-                            return false
-                        } else {
-                            return mb.modifier === modifier
-                        }
+                this.settings.modifierBindings.find((mb) => {
+                    if (mb.auxClickOnly && button != MouseButton.Auxiliary) {
+                        return false
+                    } else {
+                        return mb.modifier === modifier
                     }
-                )
-            const profileName =
-                matchedMB?.browser ?? this.settings.selected
+                })
+            const profileName = matchedMB?.browser ?? this.settings.selected
             const popupWindow =
-                el.getAttr('target') === '_blank'
-                    ? true
-                    : false
+                el.getAttr('target') === '_blank' ? true : false
             const cmd = this.getOpenCMD(profileName)
             if (this.settings.enableLog) {
                 log('info', 'external link clicked...', {
@@ -151,8 +137,7 @@ export default class OpenLinkPlugin extends Plugin {
             }
             // right click trigger (windows only)
             if (
-                typeof options.allowedButton !=
-                    'undefined' &&
+                typeof options.allowedButton != 'undefined' &&
                 button != options.allowedButton
             ) {
                 return
@@ -160,26 +145,18 @@ export default class OpenLinkPlugin extends Plugin {
             // in-app view
             if (profileName === BROWSER_IN_APP.val) {
                 evt.preventDefault()
-                this._viewmgr.createView(
-                    url,
-                    ViewMode.NEW,
-                    {
-                        popupWindow,
-                        focus: matchedMB?.focusOnView,
-                    }
-                )
+                this._viewmgr.createView(url, ViewMode.NEW, {
+                    popupWindow,
+                    focus: matchedMB?.focusOnView,
+                })
                 return
             }
             if (profileName === BROWSER_IN_APP_LAST.val) {
                 evt.preventDefault()
-                this._viewmgr.createView(
-                    url,
-                    ViewMode.LAST,
-                    {
-                        popupWindow,
-                        focus: matchedMB?.focusOnView,
-                    }
-                )
+                this._viewmgr.createView(url, ViewMode.LAST, {
+                    popupWindow,
+                    focus: matchedMB?.focusOnView,
+                })
                 return
             }
             if (typeof cmd !== 'undefined') {
@@ -210,34 +187,18 @@ export default class OpenLinkPlugin extends Plugin {
         this._clickUtils = new ClickUtils(this._windowUtils)
         const initWindow = (win: MWindow) => {
             this._windowUtils.registerWindow(win)
-            this._clickUtils.overrideDefaultWindowOpen(
-                win,
-                true
-            )
+            this._clickUtils.overrideDefaultWindowOpen(win, true)
             this._clickUtils.initDocClickHandler(win)
             this.registerDomEvent(win, 'click', (evt) => {
-                return extLinkClick(
-                    evt,
-                    'oolw-external-link-dummy',
-                    {
-                        allowedButton: MouseButton.Main,
-                    }
-                )
+                return extLinkClick(evt, 'oolw-external-link-dummy', {
+                    allowedButton: MouseButton.Main,
+                })
             })
-            this.registerDomEvent(
-                win,
-                'auxclick',
-                (evt) => {
-                    return extLinkClick(
-                        evt,
-                        'oolw-external-link-dummy',
-                        {
-                            allowedButton:
-                                MouseButton.Auxiliary,
-                        }
-                    )
-                }
-            )
+            this.registerDomEvent(win, 'auxclick', (evt) => {
+                return extLinkClick(evt, 'oolw-external-link-dummy', {
+                    allowedButton: MouseButton.Auxiliary,
+                })
+            })
         }
         initWindow(activeWindow as MWindow)
         this.app.workspace.on('window-open', (ww, win) => {
@@ -247,30 +208,17 @@ export default class OpenLinkPlugin extends Plugin {
         this.app.workspace.onLayoutReady(async () => {
             await this._viewmgr.restoreView()
             if (this.settings.enableLog) {
-                log(
-                    'info',
-                    'restored views',
-                    this.settings.inAppViewRec
-                )
+                log('info', 'restored views', this.settings.inAppViewRec)
             }
         })
     }
     async onunload(): Promise<void> {
         if (typeof this._windowUtils !== 'undefined') {
-            Object.keys(
-                this._windowUtils.getRecords()
-            ).forEach((mid) => {
+            Object.keys(this._windowUtils.getRecords()).forEach((mid) => {
                 const win = this._windowUtils.getWindow(mid)
-                if (
-                    typeof this._clickUtils !== 'undefined'
-                ) {
-                    this._clickUtils.removeDocClickHandler(
-                        win
-                    )
-                    this._clickUtils.overrideDefaultWindowOpen(
-                        win,
-                        false
-                    )
+                if (typeof this._clickUtils !== 'undefined') {
+                    this._clickUtils.removeDocClickHandler(win)
+                    this._clickUtils.overrideDefaultWindowOpen(win, false)
                 }
                 this._windowUtils.unregisterWindow(win)
             })
@@ -298,9 +246,7 @@ export default class OpenLinkPlugin extends Plugin {
         if (val === BROWSER_GLOBAL.val) {
             val = this.settings.selected
         }
-        return this._profile.getBrowsersCMD(
-            this.settings.custom
-        )[val]
+        return this._profile.getBrowsersCMD(this.settings.custom)[val]
     }
 }
 
@@ -349,9 +295,7 @@ class SettingTab extends PluginSettingTab {
             async (val) => {
                 const timeout = parseInt(val)
                 if (Number.isNaN(timeout)) {
-                    this.panic(
-                        'Value of timeout should be interger.'
-                    )
+                    this.panic('Value of timeout should be interger.')
                 } else {
                     this.plugin.settings.timeout = timeout
                     await this.plugin.saveSettings()
@@ -370,9 +314,7 @@ class SettingTab extends PluginSettingTab {
         containerEl.empty()
         new Setting(containerEl)
             .setName('Browser')
-            .setDesc(
-                'Open external link with selected browser.'
-            )
+            .setDesc('Open external link with selected browser.')
             .addDropdown((dd) => {
                 const browsers: ProfileDisplay[] = [
                     BROWSER_SYSTEM,
@@ -387,14 +329,10 @@ class SettingTab extends PluginSettingTab {
                     }),
                 ]
                 let current = browsers.findIndex(
-                    ({ val }) =>
-                        val ===
-                        this.plugin.settings.selected
+                    ({ val }) => val === this.plugin.settings.selected
                 )
                 if (current !== -1) {
-                    browsers.unshift(
-                        browsers.splice(current, 1)[0]
-                    )
+                    browsers.unshift(browsers.splice(current, 1)[0])
                 }
                 browsers.forEach((b) =>
                     dd.addOption(b.val, b.display ?? b.val)
@@ -411,11 +349,7 @@ class SettingTab extends PluginSettingTab {
                 text
                     .setPlaceholder('{}')
                     .setValue(
-                        JSON.stringify(
-                            this.plugin.settings.custom,
-                            null,
-                            4
-                        )
+                        JSON.stringify(this.plugin.settings.custom, null, 4)
                     )
                     .onChange(this._profileChangeHandler)
             )
@@ -425,30 +359,24 @@ class SettingTab extends PluginSettingTab {
             .addButton((btn) => {
                 btn.setButtonText('New')
                 btn.onClick(async (_) => {
-                    this.plugin.settings.modifierBindings.unshift(
-                        {
-                            id: genRandomStr(6),
-                            platform: Platform.Unknown,
-                            modifier: 'none',
-                            focusOnView: true,
-                            auxClickOnly: true,
-                        }
-                    )
+                    this.plugin.settings.modifierBindings.unshift({
+                        id: genRandomStr(6),
+                        platform: Platform.Unknown,
+                        modifier: 'none',
+                        focusOnView: true,
+                        auxClickOnly: true,
+                    })
                     await this.plugin.saveSettings()
                     this._render()
                 })
             })
         const mbSettingEl = mbSetting.settingEl
         mbSettingEl.setAttr('style', 'flex-wrap:wrap')
-        const bindings =
-            this.plugin.settings.modifierBindings
+        const bindings = this.plugin.settings.modifierBindings
 
         bindings.forEach((mb) => {
             const ctr = document.createElement('div')
-            ctr.setAttr(
-                'style',
-                'flex-basis:100%;height:auto;margin-top:18px'
-            )
+            ctr.setAttr('style', 'flex-basis:100%;height:auto;margin-top:18px')
             const mini = document.createElement('div')
             const kb = new Setting(mini)
             kb.addDropdown((dd) => {
@@ -468,9 +396,7 @@ class SettingTab extends PluginSettingTab {
                 browsers.forEach((b) => {
                     dd.addOption(b.val, b.display ?? b.val)
                 })
-                dd.setValue(
-                    mb.browser ?? BROWSER_GLOBAL.val
-                )
+                dd.setValue(mb.browser ?? BROWSER_GLOBAL.val)
                 dd.onChange(async (browser) => {
                     if (browser === BROWSER_GLOBAL.val) {
                         browser = undefined
@@ -483,14 +409,9 @@ class SettingTab extends PluginSettingTab {
                 })
             })
             kb.addToggle((toggle) => {
-                toggle.toggleEl.setAttribute(
-                    'id',
-                    'oolw-aux-click-toggle'
-                )
+                toggle.toggleEl.setAttribute('id', 'oolw-aux-click-toggle')
                 toggle.setValue(mb.auxClickOnly)
-                toggle.setTooltip(
-                    'Triggers on middle mouse button click only'
-                )
+                toggle.setTooltip('Triggers on middle mouse button click only')
                 toggle.onChange(async (val) => {
                     this.plugin.settings.modifierBindings.find(
                         (m) => m.id === mb.id
@@ -499,10 +420,7 @@ class SettingTab extends PluginSettingTab {
                 })
             })
             kb.addToggle((toggle) => {
-                toggle.toggleEl.setAttribute(
-                    'id',
-                    'oolw-view-focus-toggle'
-                )
+                toggle.toggleEl.setAttribute('id', 'oolw-view-focus-toggle')
                 if (
                     mb.browser === BROWSER_IN_APP.val ||
                     mb.browser === BROWSER_IN_APP_LAST.val
@@ -510,10 +428,7 @@ class SettingTab extends PluginSettingTab {
                     toggle.setDisabled(false)
                     toggle.setValue(mb.focusOnView)
                 } else {
-                    toggle.toggleEl.setAttribute(
-                        'style',
-                        'opacity:0.2'
-                    )
+                    toggle.toggleEl.setAttribute('style', 'opacity:0.2')
                     toggle.setDisabled(true)
                     toggle.setValue(false)
                 }
@@ -539,14 +454,12 @@ class SettingTab extends PluginSettingTab {
                     )
                 })
                 dd.setValue(mb.modifier)
-                dd.onChange(
-                    async (modifier: ValidModifier) => {
-                        this.plugin.settings.modifierBindings.find(
-                            (m) => m.id === mb.id
-                        ).modifier = modifier
-                        await this.plugin.saveSettings()
-                    }
-                )
+                dd.onChange(async (modifier: ValidModifier) => {
+                    this.plugin.settings.modifierBindings.find(
+                        (m) => m.id === mb.id
+                    ).modifier = modifier
+                    await this.plugin.saveSettings()
+                })
             })
             kb.addButton((btn) => {
                 btn.setButtonText('Remove')
@@ -556,10 +469,7 @@ class SettingTab extends PluginSettingTab {
                         this.plugin.settings.modifierBindings.findIndex(
                             (m) => m.id === mb.id
                         )
-                    this.plugin.settings.modifierBindings.splice(
-                        idx,
-                        1
-                    )
+                    this.plugin.settings.modifierBindings.splice(idx, 1)
                     await this.plugin.saveSettings()
                     this._render()
                 })
@@ -574,13 +484,9 @@ class SettingTab extends PluginSettingTab {
 
         new Setting(containerEl)
             .setName('Logs')
-            .setDesc(
-                'Display logs in console (open developer tools to view).'
-            )
+            .setDesc('Display logs in console (open developer tools to view).')
             .addToggle((toggle) => {
-                toggle.setValue(
-                    this.plugin.settings.enableLog
-                )
+                toggle.setValue(this.plugin.settings.enableLog)
                 toggle.onChange(async (val) => {
                     this.plugin.settings.enableLog = val
                     await this.plugin.saveSettings()
@@ -592,9 +498,7 @@ class SettingTab extends PluginSettingTab {
             .addText((text) =>
                 text
                     .setPlaceholder('500')
-                    .setValue(
-                        this.plugin.settings.timeout.toString()
-                    )
+                    .setValue(this.plugin.settings.timeout.toString())
                     .onChange(this._timeoutChangeHandler)
             )
     }

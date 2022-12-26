@@ -28,15 +28,11 @@ const BROWSER_IN_APP_LAST: ProfileDisplay = {
     display: 'in-app view',
 }
 
-const _isExecutableExist = async (
-    fp: string
-): Promise<boolean> => {
+const _isExecutableExist = async (fp: string): Promise<boolean> => {
     return existsSync(fp)
 }
 
-const _isExecutableAvailable = async (
-    exec: string
-): Promise<boolean> => {
+const _isExecutableAvailable = async (exec: string): Promise<boolean> => {
     return spawnSync('which', [exec]).status === 0
 }
 
@@ -66,8 +62,7 @@ const PRESET_BROWSERS = {
                     args: ['--private-window'],
                 },
             },
-            isAvailable: async (b) =>
-                _isExecutableExist(b.cmd),
+            isAvailable: async (b) => _isExecutableExist(b.cmd),
         },
         linux: {
             cmd: 'firefox',
@@ -76,8 +71,7 @@ const PRESET_BROWSERS = {
                     args: ['--private-window'],
                 },
             },
-            isAvailable: async (b) =>
-                _isExecutableAvailable(b.cmd),
+            isAvailable: async (b) => _isExecutableAvailable(b.cmd),
         },
         win32: {
             cmd: path.join(
@@ -91,8 +85,7 @@ const PRESET_BROWSERS = {
                     args: ['--private-window'],
                 },
             },
-            isAvailable: async (b) =>
-                _isExecutableExist(b.cmd),
+            isAvailable: async (b) => _isExecutableExist(b.cmd),
         },
     },
     chrome: {
@@ -109,8 +102,7 @@ const PRESET_BROWSERS = {
                     args: ['-incognito'],
                 },
             },
-            isAvailable: async (b) =>
-                _isExecutableExist(b.cmd),
+            isAvailable: async (b) => _isExecutableExist(b.cmd),
         },
         linux: {
             cmd: 'google-chrome',
@@ -119,8 +111,7 @@ const PRESET_BROWSERS = {
                     args: ['-incognito'],
                 },
             },
-            isAvailable: async (b) =>
-                _isExecutableAvailable(b.cmd),
+            isAvailable: async (b) => _isExecutableAvailable(b.cmd),
         },
         win32: {
             cmd: path.join(
@@ -136,8 +127,7 @@ const PRESET_BROWSERS = {
                     args: ['-incognito'],
                 },
             },
-            isAvailable: async (b) =>
-                _isExecutableExist(b.cmd),
+            isAvailable: async (b) => _isExecutableExist(b.cmd),
         },
     },
     chromium: {
@@ -154,8 +144,7 @@ const PRESET_BROWSERS = {
                     args: ['-incognito'],
                 },
             },
-            isAvailable: async (b) =>
-                _isExecutableExist(b.cmd),
+            isAvailable: async (b) => _isExecutableExist(b.cmd),
         },
         linux: {
             cmd: 'chromium-browser',
@@ -164,8 +153,7 @@ const PRESET_BROWSERS = {
                     args: ['-incognito'],
                 },
             },
-            isAvailable: async (b) =>
-                _isExecutableAvailable(b.cmd),
+            isAvailable: async (b) => _isExecutableAvailable(b.cmd),
         },
     },
     edge: {
@@ -182,8 +170,7 @@ const PRESET_BROWSERS = {
                     args: ['-inprivate'],
                 },
             },
-            isAvailable: async (b) =>
-                _isExecutableExist(b.cmd),
+            isAvailable: async (b) => _isExecutableExist(b.cmd),
         },
         win32: {
             cmd: path.join(
@@ -199,8 +186,7 @@ const PRESET_BROWSERS = {
                     args: ['-inprivate'],
                 },
             },
-            isAvailable: async (b) =>
-                _isExecutableExist(b.cmd),
+            isAvailable: async (b) => _isExecutableExist(b.cmd),
         },
     },
     brave: {
@@ -217,8 +203,7 @@ const PRESET_BROWSERS = {
                     args: ['-incognito'],
                 },
             },
-            isAvailable: async (b) =>
-                _isExecutableExist(b.cmd),
+            isAvailable: async (b) => _isExecutableExist(b.cmd),
         },
         linux: {
             cmd: 'brave-browser',
@@ -227,8 +212,7 @@ const PRESET_BROWSERS = {
                     args: ['-incognito'],
                 },
             },
-            isAvailable: async (b) =>
-                _isExecutableAvailable(b.cmd),
+            isAvailable: async (b) => _isExecutableAvailable(b.cmd),
         },
         win32: {
             cmd: path.join(
@@ -244,8 +228,7 @@ const PRESET_BROWSERS = {
                     args: ['-incognito'],
                 },
             },
-            isAvailable: async (b) =>
-                _isExecutableExist(b.cmd),
+            isAvailable: async (b) => _isExecutableExist(b.cmd),
         },
     },
     waterfox: {
@@ -262,8 +245,7 @@ const PRESET_BROWSERS = {
                     args: ['-private-window'],
                 },
             },
-            isAvailable: async (b) =>
-                _isExecutableExist(b.cmd),
+            isAvailable: async (b) => _isExecutableExist(b.cmd),
         },
         linux: {
             cmd: 'waterfox',
@@ -272,34 +254,21 @@ const PRESET_BROWSERS = {
                     args: ['-private-window'],
                 },
             },
-            isAvailable: async (b) =>
-                _isExecutableAvailable(b.cmd),
+            isAvailable: async (b) => _isExecutableAvailable(b.cmd),
         },
         win32: {
-            cmd: path.join(
-                'c:',
-                'Program Files',
-                'Waterfox',
-                'waterfox.exe'
-            ),
+            cmd: path.join('c:', 'Program Files', 'Waterfox', 'waterfox.exe'),
             optional: {
                 private: {
                     args: ['-private-window'],
                 },
             },
-            isAvailable: async (b) =>
-                _isExecutableExist(b.cmd),
+            isAvailable: async (b) => _isExecutableExist(b.cmd),
         },
     },
-} as Record<
-    string,
-    Partial<Record<NodeJS.Platform, BrowserProfile>>
->
+} as Record<string, Partial<Record<NodeJS.Platform, BrowserProfile>>>
 
-const MODIFIER_TEXT_FALLBACK: Record<
-    ValidModifier,
-    string
-> = {
+const MODIFIER_TEXT_FALLBACK: Record<ValidModifier, string> = {
     none: 'None',
     meta: 'Meta',
     alt: 'Alt',

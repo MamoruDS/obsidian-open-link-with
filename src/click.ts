@@ -5,6 +5,7 @@ import {
     genRandomStr,
     getModifiersFromMouseEvt,
     getValidHttpURL,
+    log,
     WindowUtils,
 } from './utils'
 
@@ -44,13 +45,10 @@ const checkClickable = (el: Element): Clickable => {
     if (!res.is_clickable && el.tagName === 'A') {
         let p = el
         while (p.tagName !== 'BODY') {
-            if (
-                p.classList.contains('community-modal-info')
-            ) {
+            if (p.classList.contains('community-modal-info')) {
                 res.is_clickable = true
                 res.url = el.getAttribute('href')
-                res.popout =
-                    el.getAttribute('target') === '_blank'
+                res.popout = el.getAttribute('target') === '_blank'
             }
             p = p.parentElement
         }
@@ -84,10 +82,7 @@ class LocalDocClickHandler {
     }
     call(evt: MouseEvent) {
         const win = evt.doc.win as MWindow
-        if (
-            typeof win.mid !== 'undefined' &&
-            this._enabled
-        ) {
+        if (typeof win.mid !== 'undefined' && this._enabled) {
             this._handler(evt)
         } else {
             // plugin has been unloaded
@@ -116,16 +111,12 @@ class LocalDocClickHandler {
         const dummy = evt.doc.createElement('a')
         const cid = genRandomStr(4)
         dummy.setAttribute('href', url)
-        dummy.setAttribute(
-            'target',
-            clickable.popout ? '_blank' : '_self'
-        )
+        dummy.setAttribute('target', clickable.popout ? '_blank' : '_self')
         dummy.setAttribute('oolw-cid', cid)
         dummy.addClass('oolw-external-link-dummy')
         evt.doc.body.appendChild(dummy)
 
-        console.info({
-            from: `LocalDocClickHandler`,
+        log('info', 'click event (LocalDocClickHandler)', {
             is_aux: this.handleAuxClick,
             clickable,
             url,
@@ -156,8 +147,7 @@ class ClickUtils {
         if (!this._localHandlers.hasOwnProperty(win.mid)) {
             const clickHandler = new LocalDocClickHandler()
             clickHandler.enabled = true
-            const auxclickHandler =
-                new LocalDocClickHandler()
+            const auxclickHandler = new LocalDocClickHandler()
             auxclickHandler.enabled = true
             auxclickHandler.handleAuxClick = true
             //
@@ -188,70 +178,32 @@ class ClickUtils {
             )
             win.document.removeEventListener(
                 'auxclick',
-                handlers.auxclick.call.bind(
-                    handlers.auxclick
-                )
+                handlers.auxclick.call.bind(handlers.auxclick)
             )
             delete this._localHandlers[win.mid]
         }
     }
-    overrideDefaultWindowOpen(
-        win: MWindow,
-        enabled: boolean = true
-    ) {
-        if (
-            enabled &&
-            typeof win._builtInOpen === 'undefined'
-        ) {
+    overrideDefaultWindowOpen(win: MWindow, enabled: boolean = true) {
+        if (enabled && typeof win._builtInOpen === 'undefined') {
             win._builtInOpen = win.open
             win.oolwCIDs = []
             win.oolwPendingUrls = []
             win.open = (url, target, feature) => {
                 const validUrl = getValidHttpURL(url)
                 if (validUrl === null) {
-                    return win._builtInOpen(
-                        url,
-                        target,
-                        feature
-                    )
+                    return win._builtInOpen(url, target, feature)
                 } else {
                     // win.oolwPendingUrls.push(validUrl)
                     return win
                 }
             }
-        } else if (
-            !enabled &&
-            typeof win._builtInOpen !== 'undefined'
-        ) {
+        } else if (!enabled && typeof win._builtInOpen !== 'undefined') {
             win.open = win._builtInOpen
             delete win._builtInOpen
             delete win.oolwCIDs
             delete win.oolwPendingUrls
         }
     }
-    // TODO:
-    // finalClickHandler(
-    //     evt: MouseEvent,
-    //     validClassName: string
-    // ) {
-    //     const el = evt.target as Element
-    //     const win = evt.doc.win as MWindow
-    //     if (!el.classList.contains(validClassName)) {
-    //         return
-    //     }
-    //     const modifiers = getModifiersFromMouseEvt(evt)
-    //     const url = el.getAttribute('href')
-    //     const popup = el.getAttribute('target') === '_blank'
-    //     const button = evt.button
-    //     console.info({
-    //         from: `FinalClickHandler`,
-    //         url,
-    //         popup,
-    //         button,
-    //         modifiers,
-    //     })
-    //     evt.preventDefault()
-    // }
 }
 
 export { ClickUtils }

@@ -1,10 +1,4 @@
-import {
-    LOG_TYPE,
-    Modifier,
-    MWindow,
-    Platform,
-    ValidModifier,
-} from './types'
+import { LogLevels, Modifier, MWindow, Platform, ValidModifier } from './types'
 
 class WindowUtils {
     private _windows: Record<string, MWindow>
@@ -50,9 +44,7 @@ const getPlatform = (): Platform => {
     }
 }
 
-const getModifiersFromMouseEvt = (
-    evt: MouseEvent
-): Modifier[] => {
+const getModifiersFromMouseEvt = (evt: MouseEvent): Modifier[] => {
     const { altKey, ctrlKey, metaKey, shiftKey } = evt
     const mods: Modifier[] = []
     if (altKey) {
@@ -84,23 +76,16 @@ const genRandomStr = (len: number): string => {
     return id.join('')
 }
 
-const getValidHttpURL = (
-    url?: string | URL
-): string | null => {
+const getValidHttpURL = (url?: string | URL): string | null => {
     if (typeof url === 'undefined') {
         return null
     } else if (url instanceof URL) {
-        return ['http:', 'https:'].indexOf(url.protocol) !=
-            -1
+        return ['http:', 'https:'].indexOf(url.protocol) != -1
             ? url.toString()
             : null
     } else {
         try {
-            if (
-                ['http:', 'https:'].indexOf(
-                    new URL(url).protocol
-                ) != -1
-            ) {
+            if (['http:', 'https:'].indexOf(new URL(url).protocol) != -1) {
                 return url
             } else {
                 return null
@@ -111,10 +96,8 @@ const getValidHttpURL = (
     }
 }
 
-const getValidModifiers = (
-    platform: Platform
-): ValidModifier[] => {
-    if (platform == Platform.Unknown) {
+const getValidModifiers = (platform: Platform): ValidModifier[] => {
+    if (platform === Platform.Unknown) {
         return ['none']
     } else {
         return ['none', 'ctrl', 'meta', 'alt', 'shift']
@@ -130,23 +113,17 @@ const intersection = <T>(...lists: T[][]): T[] => {
     return lhs
 }
 
-const log = (
-    msg_type: LOG_TYPE,
-    title: string,
-    message: any
-) => {
+const log = (level: LogLevels, title: string, message: any) => {
     let wrapper: (msg: string) => any
-    if (msg_type === 'warn') {
+    if (level === 'warn') {
         wrapper = console.warn
-    } else if (msg_type === 'error') {
+    } else if (level === 'error') {
         wrapper = console.error
     } else {
         wrapper = console.info
     }
     if (typeof message === 'string') {
-        wrapper(
-            '[open-link-with] ' + title + ':\n' + message
-        )
+        wrapper('[open-link-with] ' + title + ':\n' + message)
     } else {
         wrapper('[open-link-with] ' + title)
         wrapper(message)

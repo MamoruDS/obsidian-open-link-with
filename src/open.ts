@@ -16,9 +16,7 @@ const openWith = async (
         timeout: number
     }> = {}
 ): Promise<number> => {
-    const _spawn = async (
-        args: string[]
-    ): Promise<number> => {
+    const _spawn = async (args: string[]): Promise<number> => {
         return new Promise((res) => {
             const _args: string[] = [...args]
             const reg = RegExp(/^[^"|'](.+)(?<!\\)(\ ){1}/)

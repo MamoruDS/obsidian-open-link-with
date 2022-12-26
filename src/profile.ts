@@ -9,15 +9,11 @@ import {
 
 class Browser implements _Browser {
     name: string
-    profiles: Partial<
-        Record<NodeJS.Platform, BrowserProfile>
-    >
+    profiles: Partial<Record<NodeJS.Platform, BrowserProfile>>
     customCMD: string
     constructor(
         name: string,
-        defaultCMD?: Partial<
-            Record<NodeJS.Platform, BrowserProfile>
-        >
+        defaultCMD?: Partial<Record<NodeJS.Platform, BrowserProfile>>
     ) {
         this.name = name
         this.profiles = defaultCMD
@@ -51,9 +47,7 @@ class Browser implements _Browser {
                 cmds.push(bpBase.sysCmd)
             }
             if (bpBase.sysArgs) {
-                bpBase.sysArgs.forEach((arg) =>
-                    cmds.push(arg)
-                )
+                bpBase.sysArgs.forEach((arg) => cmds.push(arg))
             }
             cmds.push(bpBase.cmd)
             if (bpBase.args) {
@@ -110,8 +104,7 @@ class ProfileMgr {
             const cmds = browser.getExecCommands(platform())
             res[browser.name] = cmds.main
             if (typeof cmds.private !== 'undefined') {
-                res[browser.name + '-private'] =
-                    cmds.private
+                res[browser.name + '-private'] = cmds.private
             }
         })
         return { ...res, ...custom }
