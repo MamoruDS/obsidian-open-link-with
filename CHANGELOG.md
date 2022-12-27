@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.8
+
+-   fixed: multi-window handling was not correct [#16](https://github.com/mamoruds/obsidian-open-link-with/issues/16)
+-   fixed: unloading plugin was not being handled correctly [#16](https://github.com/mamoruds/obsidian-open-link-with/issues/16)
+-   rewrote: click handler (no longer depends on Window.open)
+-   added: new toggle in settings panel for toggling in-app-view update focus
+-   added: preset browsers brave and waterfox
+-   updated: bump up the minimum version requirement to 1.1
+
 ## 0.1.7
 
 -   fixed: open links not working in edit mode [#3](https://github.com/MamoruDS/obsidian-open-link-with/issues/3)
