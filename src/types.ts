@@ -23,24 +23,29 @@ enum MouseButton {
 }
 
 interface BrowserOptions {
-    private: Partial<Omit<BrowserProfile, 'optional'>>
+    private: Partial<Omit<BrowserProfileBase, 'optional'>>
     background: boolean
 }
 
-interface BrowserProfile {
+interface BrowserProfileBase {
     sysCmd?: string
     sysArgs?: string[]
     cmd: string
     args?: string[]
+}
+
+interface BrowserProfile extends BrowserProfileBase {
     optional: Partial<BrowserOptions>
-    test: (b: BrowserProfile) => Promise<boolean>
+    isAvailable: (b: BrowserProfile) => Promise<boolean>
 }
 
 interface Browser {
     name: string
-    profiles: Partial<
-        Record<NodeJS.Platform, BrowserProfile>
-    >
+    profiles: Partial<Record<NodeJS.Platform, BrowserProfile>>
+    getExecCommands: (platform: NodeJS.Platform) => {
+        main: string[]
+        private?: string[]
+    }
 }
 
 interface ModifierBinding {
@@ -48,6 +53,7 @@ interface ModifierBinding {
     browser?: string
     platform: Platform
     modifier: ValidModifier
+    focusOnView: boolean
     auxClickOnly: boolean
 }
 
@@ -56,44 +62,37 @@ interface ProfileDisplay {
     display?: string
 }
 
-// for overwrite open method of `window`
-interface WindowOLW extends Window {
-    _builtInOpen: (
-        url?: string | URL,
-        target?: string,
-        features?: string
-    ) => Window
+interface MWindow extends Window {
+    mid: string
+    oolwCIDs: string[]
+    oolwPendingUrls: string[]
+    _builtInOpen: (url?: string | URL, target?: any, features?: any) => Window
 }
 
-type Clickable = Record<
-    string,
-    {
-        popout?: boolean
-        only_with?: Modifier[]
-    }
->
+type Clickable = {
+    is_clickable: boolean
+    url: string | undefined
+    popout: boolean
+    require_modifier?: Modifier[]
+}
 
-type LOG_TYPE = 'info' | 'warn' | 'error'
+type LogLevels = 'info' | 'warn' | 'error'
 
-type ValidModifier =
-    | 'none'
-    | 'ctrl'
-    | 'meta'
-    | 'alt'
-    | 'shift'
+type ValidModifier = 'none' | 'ctrl' | 'meta' | 'alt' | 'shift'
 
 export {
     Browser,
     BrowserOptions,
     BrowserProfile,
+    BrowserProfileBase,
     Clickable,
-    LOG_TYPE,
+    LogLevels,
     Modifier,
     ModifierBinding,
     MouseButton,
+    MWindow,
     Optional,
     Platform,
     ProfileDisplay,
     ValidModifier,
-    WindowOLW,
 }

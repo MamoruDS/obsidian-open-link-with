@@ -23,13 +23,15 @@ class InAppView extends ItemView {
         super(leaf)
         this.url = url
         this.title = new URL(url).host
+        // TODO: remove this after tab title issue is fixed
+        this.leaf.setPinned(true)
+        setTimeout(() => {
+            this.leaf.setPinned(false)
+        }, 10)
     }
     async onOpen(): Promise<void> {
         this.frame = document.createElement('iframe')
-        this.frame.setAttr(
-            'style',
-            'height: 100%; width:100%'
-        )
+        this.frame.setAttr('style', 'height: 100%; width:100%')
         this.frame.setAttr('src', this.url)
         this.containerEl.children[1].appendChild(this.frame)
     }
@@ -52,26 +54,19 @@ class ViewMgr {
         return leaf['id'] ?? ''
     }
     private _validRecords(): ViewRec[] {
-        const records =
-            this.plugin.settings.inAppViewRec ?? []
+        const records = this.plugin.settings.inAppViewRec ?? []
         const validRec: ViewRec[] = []
         try {
             for (const rec of records) {
                 if (
-                    this.plugin.app.workspace.getLeafById(
-                        rec.leafId
-                    ) !== null
+                    this.plugin.app.workspace.getLeafById(rec.leafId) !== null
                 ) {
                     validRec.push(rec)
                 }
             }
         } catch (err) {
             if (this.plugin.settings.enableLog) {
-                log(
-                    'error',
-                    'failed to restore views',
-                    `${err}`
-                )
+                log('error', 'failed to restore views', `${err}`)
             }
         }
         return validRec
@@ -80,6 +75,7 @@ class ViewMgr {
         url: string,
         mode: ViewMode,
         options: {
+            focus?: boolean
             popupWindow?: boolean // using popout-win will overwrite mode
         } = {}
     ): Promise<string> {
@@ -93,44 +89,38 @@ class ViewMgr {
             return this._getLeafId(leaf)
         }
         let id: string = undefined
-        if (options.popupWindow) {
+        if (options.popupWindow ?? false) {
             mode = ViewMode.NEW
-            const leaf =
-                this.plugin.app.workspace.openPopoutLeaf()
+            const leaf = this.plugin.app.workspace.openPopoutLeaf()
             id = this._getLeafId(leaf)
         } else {
-            if (mode == ViewMode.NEW) {
+            if (mode === ViewMode.NEW) {
                 id = getNewLeafId()
             } else {
                 const viewRec = this._validRecords()
                 let rec =
-                    viewRec.find(
-                        ({ mode }) => mode === ViewMode.LAST
-                    ) ??
-                    viewRec.find(
-                        ({ mode }) => mode === ViewMode.NEW
-                    )
+                    viewRec.find(({ mode }) => mode === ViewMode.LAST) ??
+                    viewRec.find(({ mode }) => mode === ViewMode.NEW)
                 id = rec?.leafId ?? getNewLeafId()
             }
         }
-        return await this.updateView(id, url, mode)
+        return await this.updateView(id, url, mode, options?.focus)
     }
     async updateView(
         leafId: string,
         url: string,
-        mode: ViewMode
+        mode: ViewMode,
+        focus: boolean = true
     ): Promise<string | null> {
-        const leaf =
-            this.plugin.app.workspace.getLeafById(leafId)
+        const leaf = this.plugin.app.workspace.getLeafById(leafId)
         if (leaf === null) {
             return null
         } else {
             const view = new InAppView(leaf, url)
             await leaf.open(view)
-            const rec =
-                this.plugin.settings.inAppViewRec.find(
-                    (rec) => rec.leafId === leafId
-                )
+            const rec = this.plugin.settings.inAppViewRec.find(
+                (rec) => rec.leafId === leafId
+            )
             if (typeof rec !== 'undefined') {
                 rec.url = url
                 // TODO:
@@ -143,6 +133,9 @@ class ViewMgr {
                 })
             }
             await this.plugin.saveSettings()
+            if (focus) {
+                this.plugin.app.workspace.setActiveLeaf(leaf)
+            }
             return leafId
         }
     }
@@ -154,7 +147,8 @@ class ViewMgr {
                 (await this.updateView(
                     rec.leafId,
                     rec.url,
-                    rec.mode
+                    rec.mode,
+                    false
                 )) !== null
             ) {
                 restored.push(rec)

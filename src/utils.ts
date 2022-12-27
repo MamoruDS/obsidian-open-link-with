@@ -1,9 +1,41 @@
-import {
-    LOG_TYPE,
-    Modifier,
-    Platform,
-    ValidModifier,
-} from './types'
+import { LogLevels, Modifier, MWindow, Platform, ValidModifier } from './types'
+
+class WindowUtils {
+    private _windows: Record<string, MWindow>
+    constructor() {
+        this._windows = {}
+    }
+    initWindow(win: MWindow) {
+        win.mid = genRandomStr(8)
+        return win
+    }
+    registerWindow(win: MWindow) {
+        if (typeof win.mid === 'undefined') {
+            win = this.initWindow(win)
+            log('info', 'window registered', { mid: win.mid, window: win })
+            this._windows[win.mid] = win
+        } else {
+            // panic
+            // log('warn', 'existing window registered', {
+            //     mid: win.mid,
+            //     window: win,
+            // })
+        }
+    }
+    unregisterWindow(win: MWindow) {
+        if (typeof win.mid !== 'undefined') {
+            delete this._windows[win.mid]
+            log('info', 'window unregistered', { mid: win.mid, window: win })
+            win.mid = undefined
+        }
+    }
+    getRecords(): Record<string, MWindow> {
+        return this._windows
+    }
+    getWindow(mid: string): MWindow {
+        return this._windows[mid]
+    }
+}
 
 const getPlatform = (): Platform => {
     const platform = window.navigator.platform
@@ -17,9 +49,7 @@ const getPlatform = (): Platform => {
     }
 }
 
-const getModifiersFromMouseEvt = (
-    evt: MouseEvent
-): Modifier[] => {
+const getModifiersFromMouseEvt = (evt: MouseEvent): Modifier[] => {
     const { altKey, ctrlKey, metaKey, shiftKey } = evt
     const mods: Modifier[] = []
     if (altKey) {
@@ -51,23 +81,16 @@ const genRandomStr = (len: number): string => {
     return id.join('')
 }
 
-const getValidHttpURL = (
-    url?: string | URL
-): string | null => {
+const getValidHttpURL = (url?: string | URL): string | null => {
     if (typeof url === 'undefined') {
         return null
     } else if (url instanceof URL) {
-        return ['http:', 'https:'].indexOf(url.protocol) !=
-            -1
+        return ['http:', 'https:'].indexOf(url.protocol) != -1
             ? url.toString()
             : null
     } else {
         try {
-            if (
-                ['http:', 'https:'].indexOf(
-                    new URL(url).protocol
-                ) != -1
-            ) {
+            if (['http:', 'https:'].indexOf(new URL(url).protocol) != -1) {
                 return url
             } else {
                 return null
@@ -78,21 +101,12 @@ const getValidHttpURL = (
     }
 }
 
-const getValidModifiers = (
-    platform: Platform
-): ValidModifier[] => {
-    if (platform == Platform.Unknown) {
+const getValidModifiers = (platform: Platform): ValidModifier[] => {
+    if (platform === Platform.Unknown) {
         return ['none']
     } else {
         return ['none', 'ctrl', 'meta', 'alt', 'shift']
     }
-}
-
-const globalWindowFunc = (cb: (win: Window) => void) => {
-    cb(activeWindow)
-    app.workspace.on('window-open', (ww, win) => {
-        cb(win)
-    })
 }
 
 const intersection = <T>(...lists: T[][]): T[] => {
@@ -104,27 +118,16 @@ const intersection = <T>(...lists: T[][]): T[] => {
     return lhs
 }
 
-const log = (
-    msg_type: LOG_TYPE,
-    title: string,
-    message: any
-) => {
-    let wrapper: (msg: string) => any
-    if (msg_type === 'warn') {
-        wrapper = console.warn
-    } else if (msg_type === 'error') {
-        wrapper = console.error
+const log = (level: LogLevels, title: string, message: any) => {
+    let logger: (...args: any[]) => any
+    if (level === 'warn') {
+        logger = console.warn
+    } else if (level === 'error') {
+        logger = console.error
     } else {
-        wrapper = console.info
+        logger = console.info
     }
-    if (typeof message === 'string') {
-        wrapper(
-            '[open-link-with] ' + title + ':\n' + message
-        )
-    } else {
-        wrapper('[open-link-with] ' + title)
-        wrapper(message)
-    }
+    logger(`[open-link-with] ${title}`, message)
 }
 
 export {
@@ -133,7 +136,7 @@ export {
     genRandomStr,
     getValidModifiers,
     getValidHttpURL,
-    globalWindowFunc,
     intersection,
     log,
+    WindowUtils,
 }
