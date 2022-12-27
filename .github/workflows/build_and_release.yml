@@ -1,0 +1,32 @@
+name: build_and_release
+
+on:
+    push:
+        tags:
+            - '*'
+
+jobs:
+    build-and-release:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v3
+            - name: use node.js
+              uses: actions/setup-node@v3
+              with:
+                  node-version: 16
+            - name: update submodules
+              run: git submodule update --init --recursive
+            - name: build
+              run: npm install && npm run build
+            - name: archive
+              run: sh scripts/archive.sh
+            - name: draft release
+              uses: softprops/action-gh-release@v1
+              with:
+                  draft: true
+                  files: |
+                      obsidian-open-link-with-${{ github.ref_name }}.zip
+                      manifest.json
+                      dist/main.js
+                  tag_name: ${{ github.ref_name }}
+                  name: ${{ github.ref_name }}
