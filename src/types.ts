@@ -83,9 +83,9 @@ interface MWindow extends Window {
 
 type Clickable = {
     is_clickable: boolean
-    url: string | undefined
+    url: string | null
     popout: boolean
-    required_modifiers?: Modifier[]
+    modifier_rules?: _MatchRule<Modifier>[]
 }
 
 type LogLevels = 'info' | 'warn' | 'error'
