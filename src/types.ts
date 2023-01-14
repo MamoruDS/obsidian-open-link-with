@@ -7,6 +7,18 @@ enum Platform {
     Win = 'win',
 }
 
+class _MatchRule<R> {
+    constructor(public items: R[]) {}
+}
+
+class MRExact<R> extends _MatchRule<R> {}
+
+class MRContains<R> extends _MatchRule<R> {}
+
+class MRNotExact<R> extends _MatchRule<R> {}
+
+class MRNotContains<R> extends _MatchRule<R> {}
+
 enum Modifier {
     Alt = 'alt',
     Ctrl = 'ctrl',
@@ -87,6 +99,11 @@ export {
     BrowserProfileBase,
     Clickable,
     LogLevels,
+    _MatchRule,
+    MRExact,
+    MRContains,
+    MRNotExact,
+    MRNotContains,
     Modifier,
     ModifierBinding,
     MouseButton,
