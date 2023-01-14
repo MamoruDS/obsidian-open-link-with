@@ -73,7 +73,7 @@ type Clickable = {
     is_clickable: boolean
     url: string | undefined
     popout: boolean
-    require_modifier?: Modifier[]
+    required_modifiers?: Modifier[]
 }
 
 type LogLevels = 'info' | 'warn' | 'error'

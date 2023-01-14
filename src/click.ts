@@ -14,7 +14,7 @@ const checkClickable = (el: Element): Clickable => {
         is_clickable: false,
         url: undefined, // might be invalid; check before return
         popout: false,
-        require_modifier: [],
+        required_modifiers: [],
     } as Clickable
     // example of el with `external-link`:
     //  - links in preview mode
@@ -38,7 +38,7 @@ const checkClickable = (el: Element): Clickable => {
     if (el.classList.contains('cm-url')) {
         res.is_clickable = true
         res.url = el.innerHTML.trim()
-        res.require_modifier = Platform.isMacOS
+        res.required_modifiers = Platform.isMacOS
             ? [Modifier.Meta]
             : [Modifier.Ctrl]
     }
@@ -120,6 +120,7 @@ class LocalDocClickHandler {
             is_aux: this.handleAuxClick,
             clickable,
             url,
+            modifiers,
             dummy,
             btn: evt.button,
         })
