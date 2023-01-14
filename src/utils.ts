@@ -1,4 +1,48 @@
-import { LogLevels, Modifier, MWindow, Platform, ValidModifier } from './types'
+import {
+    LogLevels,
+    _MatchRule,
+    MRExact,
+    MRContains,
+    MRNotExact,
+    MRNotContains,
+    Modifier,
+    MWindow,
+    Platform,
+    ValidModifier,
+} from './types'
+
+class RulesChecker<R> {
+    private _rules: _MatchRule<R>[]
+    constructor(rules: _MatchRule<R>[] = []) {
+        this._rules = rules
+    }
+    addRule(rule: _MatchRule<R>) {
+        this._rules.push(rule)
+    }
+    check(input: R[]): boolean {
+        let success = false
+        for (const rule of this._rules) {
+            const { items } = rule
+            if (rule instanceof MRExact || rule instanceof MRNotExact) {
+                let res = false
+                if (items.length === input.length) {
+                    res = items.every((item) => input.contains(item))
+                }
+                success = success || (rule instanceof MRExact ? res : !res)
+            } else if (
+                rule instanceof MRContains ||
+                rule instanceof MRNotContains
+            ) {
+                let res = false
+                if (items.length <= input.length) {
+                    res = items.every((item) => input.contains(item))
+                }
+                success = success || (rule instanceof MRContains ? res : !res)
+            }
+        }
+        return success
+    }
+}
 
 class WindowUtils {
     private _windows: Record<string, MWindow>
@@ -138,5 +182,6 @@ export {
     getValidHttpURL,
     intersection,
     log,
+    RulesChecker,
     WindowUtils,
 }
