@@ -25,9 +25,12 @@ import {
     MouseButton,
     MWindow,
     Optional,
+    OpenLinkPluginITF,
     Platform,
+    PluginSettings,
     ProfileDisplay,
     ValidModifier,
+    ProfileMgrITF,
 } from './types'
 import {
     genRandomStr,
@@ -39,15 +42,6 @@ import {
 } from './utils'
 import { ViewMgr, ViewMode, ViewRec } from './view'
 
-interface PluginSettings {
-    selected: string
-    custom: Record<string, string[]>
-    modifierBindings: ModifierBinding[]
-    enableLog: boolean
-    timeout: number
-    inAppViewRec: ViewRec[]
-}
-
 const DEFAULT_SETTINGS: PluginSettings = {
     selected: BROWSER_SYSTEM.val,
     custom: {},
@@ -57,17 +51,20 @@ const DEFAULT_SETTINGS: PluginSettings = {
     inAppViewRec: [],
 }
 
-export default class OpenLinkPlugin extends Plugin {
-    settings: PluginSettings
-    _clickUtils?: ClickUtils
-    _profile: ProfileMgr
-    _windowUtils?: WindowUtils
-    _viewmgr: ViewMgr
-    async onload() {
+export default class OpenLinkPlugin
+    extends Plugin
+    implements OpenLinkPluginITF
+{
+    public settings: PluginSettings
+    public profiles: ProfileMgrITF
+    private _clickUtils?: ClickUtils
+    private _windowUtils?: WindowUtils
+    private _viewmgr: ViewMgr
+    async onload(): Promise<void> {
         this._viewmgr = new ViewMgr(this)
         await this.loadSettings()
-        this._profile = new ProfileMgr()
-        await this._profile.loadValidPresetBrowsers()
+        this.profiles = new ProfileMgr()
+        await this.profiles.loadValidPresetBrowsers()
         const extLinkClick = async (
             evt: MouseEvent,
             validClassName: string,
@@ -184,7 +181,7 @@ export default class OpenLinkPlugin extends Plugin {
         this.addSettingTab(new SettingTab(this.app, this))
         //
         this._windowUtils = new WindowUtils()
-        this._clickUtils = new ClickUtils(this._windowUtils)
+        this._clickUtils = new ClickUtils(this, this._windowUtils)
         const initWindow = (win: MWindow) => {
             this._windowUtils.registerWindow(win)
             this._clickUtils.overrideDefaultWindowOpen(win, true)
@@ -224,14 +221,14 @@ export default class OpenLinkPlugin extends Plugin {
             delete this._windowUtils
         }
     }
-    async loadSettings() {
+    async loadSettings(): Promise<void> {
         this.settings = Object.assign(
             {},
             DEFAULT_SETTINGS,
             await this.loadData()
         )
     }
-    async saveSettings() {
+    async saveSettings(): Promise<void> {
         if (this.settings.enableLog) {
             log('info', 'saving settings', this.settings)
         }
@@ -244,9 +241,9 @@ export default class OpenLinkPlugin extends Plugin {
         if (val === BROWSER_GLOBAL.val) {
             val = this.settings.selected
         }
-        return this._profile.getBrowsersCMD(this.settings.custom)[val]
+        return this.profiles.getBrowsersCMD(this.settings.custom)[val]
     }
-    _oolwUnloadWindow(win: MWindow) {
+    _oolwUnloadWindow(win: MWindow): void {
         if (typeof this._clickUtils !== 'undefined') {
             this._clickUtils.removeDocClickHandler(win)
             this._clickUtils.overrideDefaultWindowOpen(win, false)
@@ -255,7 +252,7 @@ export default class OpenLinkPlugin extends Plugin {
             this._windowUtils.unregisterWindow(win)
         }
     }
-    _oolwUnloadWindowByMID(mid: string) {
+    _oolwUnloadWindowByMID(mid: string): void {
         if (typeof this._windowUtils !== 'undefined') {
             const win = this._windowUtils.getWindow(mid)
             if (typeof win !== 'undefined') {
@@ -266,8 +263,7 @@ export default class OpenLinkPlugin extends Plugin {
 }
 
 class PanicModal extends Modal {
-    message: string
-    constructor(app: App, message: string) {
+    constructor(app: App, public message: string) {
         super(app)
         this.message = message
     }
@@ -282,10 +278,9 @@ class PanicModal extends Modal {
 }
 
 class SettingTab extends PluginSettingTab {
-    plugin: OpenLinkPlugin
     _profileChangeHandler: Debouncer<string[], undefined>
     _timeoutChangeHandler: Debouncer<string[], undefined>
-    constructor(app: App, plugin: OpenLinkPlugin) {
+    constructor(app: App, public plugin: OpenLinkPluginITF) {
         super(app, plugin)
         this.plugin = plugin
         this._profileChangeHandler = debounce(
@@ -336,7 +331,7 @@ class SettingTab extends PluginSettingTab {
                     BROWSER_IN_APP_LAST,
                     BROWSER_IN_APP,
                     ...Object.keys(
-                        this.plugin._profile.getBrowsersCMD(
+                        this.plugin.profiles.getBrowsersCMD(
                             this.plugin.settings.custom
                         )
                     ).map((b) => {
@@ -400,7 +395,7 @@ class SettingTab extends PluginSettingTab {
                     BROWSER_IN_APP_LAST,
                     BROWSER_IN_APP,
                     ...Object.keys(
-                        this.plugin._profile.getBrowsersCMD(
+                        this.plugin.profiles.getBrowsersCMD(
                             this.plugin.settings.custom
                         )
                     ).map((b) => {

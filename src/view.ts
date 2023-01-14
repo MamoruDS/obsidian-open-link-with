@@ -1,24 +1,13 @@
 import { ItemView, WorkspaceLeaf } from 'obsidian'
 import { BuiltinIcon } from './obsidian/types'
-import OpenLinkPlugin from './main'
+import { OpenLinkPluginITF, ViewMode, ViewRec } from './types'
 import { log } from './utils'
 
-enum ViewMode {
-    LAST,
-    NEW,
-}
-
-type ViewRec = {
-    leafId: string
-    url: string
-    mode: ViewMode
-}
-
 class InAppView extends ItemView {
-    icon: BuiltinIcon = 'link'
-    frame: HTMLIFrameElement
-    title: string
-    url: string
+    public icon: BuiltinIcon = 'link'
+    public frame: HTMLIFrameElement
+    public title: string
+    public url: string
     constructor(leaf: WorkspaceLeaf, url: string) {
         super(leaf)
         this.url = url
@@ -44,11 +33,8 @@ class InAppView extends ItemView {
 }
 
 class ViewMgr {
-    plugin: OpenLinkPlugin
-    constructor(plugin: OpenLinkPlugin) {
-        this.plugin = plugin
-    }
-    // private _getLeafID(leaf: WorkspaceLeaf): string {
+    constructor(public plugin: OpenLinkPluginITF) {}
+    // private _getLeafID(leaf: WorkspaceLeaf): string
     // FIXME: missing property
     private _getLeafId(leaf: any): string {
         return leaf['id'] ?? ''

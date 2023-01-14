@@ -1,3 +1,5 @@
+import { Plugin } from 'obsidian'
+
 type Optional<T> = T | undefined
 
 enum Platform {
@@ -32,6 +34,11 @@ enum MouseButton {
     Secondary,
     Fourth,
     Fifth,
+}
+
+enum ViewMode {
+    LAST,
+    NEW,
 }
 
 interface BrowserOptions {
@@ -69,9 +76,33 @@ interface ModifierBinding {
     auxClickOnly: boolean
 }
 
+interface OpenLinkPluginITF extends Plugin {
+    settings: PluginSettings
+    profiles: ProfileMgrITF
+    loadSettings(): Promise<void>
+    saveSettings(): Promise<void>
+}
+
+interface PluginSettings {
+    selected: string
+    custom: Record<string, string[]>
+    modifierBindings: ModifierBinding[]
+    enableLog: boolean
+    timeout: number
+    inAppViewRec: ViewRec[]
+}
+
 interface ProfileDisplay {
     val: string
     display?: string
+}
+
+interface ProfileMgrITF {
+    loadValidPresetBrowsers: () => Promise<void>
+    getBrowsers: () => Browser[]
+    getBrowsersCMD: (
+        custom: Record<string, string[]>
+    ) => Record<string, string[]>
 }
 
 interface MWindow extends Window {
@@ -92,6 +123,12 @@ type LogLevels = 'info' | 'warn' | 'error'
 
 type ValidModifier = 'none' | 'ctrl' | 'meta' | 'alt' | 'shift'
 
+type ViewRec = {
+    leafId: string
+    url: string
+    mode: ViewMode
+}
+
 export {
     Browser,
     BrowserOptions,
@@ -108,8 +145,13 @@ export {
     ModifierBinding,
     MouseButton,
     MWindow,
+    OpenLinkPluginITF,
     Optional,
     Platform,
+    PluginSettings,
     ProfileDisplay,
+    ProfileMgrITF,
     ValidModifier,
+    ViewMode,
+    ViewRec,
 }
