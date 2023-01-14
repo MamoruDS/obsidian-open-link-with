@@ -1,20 +1,30 @@
 import { Platform } from 'obsidian'
 
-import { Clickable, Modifier, MWindow } from './types'
+import {
+    Clickable,
+    _MatchRule,
+    MRExact,
+    MRContains,
+    MRNotExact,
+    MRNotContains,
+    Modifier,
+    MWindow,
+} from './types'
 import {
     genRandomStr,
     getModifiersFromMouseEvt,
     getValidHttpURL,
     log,
+    RulesChecker,
     WindowUtils,
 } from './utils'
 
 const checkClickable = (el: Element): Clickable => {
     const res = {
         is_clickable: false,
-        url: undefined, // might be invalid; check before return
+        url: null, // url is safe to be null when `oolwPendingUrls` is not empty
         popout: false,
-        required_modifiers: [],
+        modifier_rules: [],
     } as Clickable
     // example of el with `external-link`:
     //  - links in preview mode
@@ -29,18 +39,24 @@ const checkClickable = (el: Element): Clickable => {
         // res.popout = true
     }
     // example of el with `cm-underline`:
-    //  -
+    //  - links in live preview mode
     if (el.classList.contains('cm-underline')) {
-        // res.is_clickable = true
+        res.is_clickable = true
+        // res.url = // determined by `window._builtInOpen`
+        res.modifier_rules = [
+            new MRNotExact([Modifier.Alt]),
+            new MRNotExact([Modifier.Shift]),
+            new MRNotExact([Modifier.Alt, Modifier.Shift]),
+        ]
     }
     // example of el with `cm-url`:
     //  - links in editing mode
     if (el.classList.contains('cm-url')) {
         res.is_clickable = true
         res.url = el.innerHTML.trim()
-        res.required_modifiers = Platform.isMacOS
-            ? [Modifier.Meta]
-            : [Modifier.Ctrl]
+        res.modifier_rules = Platform.isMacOS
+            ? [new MRContains([Modifier.Meta])]
+            : [new MRContains([Modifier.Ctrl])]
     }
     if (!res.is_clickable && el.tagName === 'A') {
         let p = el
@@ -52,11 +68,6 @@ const checkClickable = (el: Element): Clickable => {
             }
             p = p.parentElement
         }
-    }
-    //
-    const url = getValidHttpURL(res.url)
-    if (url === null) {
-        res.is_clickable = false
     }
     return res
 }
@@ -98,15 +109,36 @@ class LocalDocClickHandler {
         if (!clickable.is_clickable) {
             return false
         }
+        let fire = true // mark click will be fired
+        if (clickable.modifier_rules.length > 0) {
+            const match = new RulesChecker(clickable.modifier_rules)
+            if (!match.check(modifiers)) {
+                fire = false
+            }
+        }
         // apply on middle click only
         if (this.handleAuxClick && evt.button === 2) {
-            return
+            fire = false
         }
         evt.preventDefault()
         let url: string = clickable.url
-        // win.oolwPendingUrls should have higher priority
         if (win.oolwPendingUrls.length > 0) {
-            url = win.oolwPendingUrls.shift()
+            // win.oolwPendingUrls have higher priority
+            // e.g., live preview links
+            url = win.oolwPendingUrls.pop()
+        }
+        if (url === null) {
+            fire = false
+        }
+        log('info', 'click event (LocalDocClickHandler)', {
+            is_aux: this.handleAuxClick,
+            clickable,
+            url,
+            modifiers,
+            btn: evt.button,
+        })
+        if (!fire) {
+            return false
         }
         const dummy = evt.doc.createElement('a')
         const cid = genRandomStr(4)
@@ -115,16 +147,7 @@ class LocalDocClickHandler {
         dummy.setAttribute('oolw-cid', cid)
         dummy.addClass('oolw-external-link-dummy')
         evt.doc.body.appendChild(dummy)
-
-        log('info', 'click event (LocalDocClickHandler)', {
-            is_aux: this.handleAuxClick,
-            clickable,
-            url,
-            modifiers,
-            dummy,
-            btn: evt.button,
-        })
-
+        //
         const e_cp = new MouseEvent(evt.type, evt)
         dummy.dispatchEvent(e_cp)
         dummy.remove()
@@ -194,7 +217,7 @@ class ClickUtils {
                 if (validUrl === null) {
                     return win._builtInOpen(url, target, feature)
                 } else {
-                    // win.oolwPendingUrls.push(validUrl)
+                    win.oolwPendingUrls.push(validUrl)
                     return win
                 }
             }
