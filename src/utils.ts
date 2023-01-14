@@ -9,6 +9,7 @@ import {
     MWindow,
     Platform,
     ValidModifier,
+    OpenLinkPluginITF,
 } from './types'
 
 class RulesChecker<R> {
@@ -46,7 +47,7 @@ class RulesChecker<R> {
 
 class WindowUtils {
     private _windows: Record<string, MWindow>
-    constructor() {
+    constructor(private _plugin: OpenLinkPluginITF) {
         this._windows = {}
     }
     initWindow(win: MWindow) {
@@ -56,14 +57,18 @@ class WindowUtils {
     registerWindow(win: MWindow) {
         if (typeof win.mid === 'undefined') {
             win = this.initWindow(win)
-            log('info', 'window registered', { mid: win.mid, window: win })
+            if (this._plugin.settings.enableLog) {
+                log('info', 'window registered', { mid: win.mid, window: win })
+            }
             this._windows[win.mid] = win
         } else {
             // panic
-            // log('warn', 'existing window registered', {
-            //     mid: win.mid,
-            //     window: win,
-            // })
+            // if (this._plugin.settings.enableLog) {
+            //     log('warn', 'existing window registered', {
+            //         mid: win.mid,
+            //         window: win,
+            //     })
+            // }
         }
     }
     unregisterWindow(win: MWindow) {
@@ -134,11 +139,7 @@ const getValidHttpURL = (url?: string | URL): string | null => {
             : null
     } else {
         try {
-            if (['http:', 'https:'].indexOf(new URL(url).protocol) != -1) {
-                return url
-            } else {
-                return null
-            }
+            return getValidHttpURL(new URL(url))
         } catch (TypeError) {
             return null
         }

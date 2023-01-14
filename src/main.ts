@@ -180,7 +180,7 @@ export default class OpenLinkPlugin
         //
         this.addSettingTab(new SettingTab(this.app, this))
         //
-        this._windowUtils = new WindowUtils()
+        this._windowUtils = new WindowUtils(this)
         this._clickUtils = new ClickUtils(this, this._windowUtils)
         const initWindow = (win: MWindow) => {
             this._windowUtils.registerWindow(win)

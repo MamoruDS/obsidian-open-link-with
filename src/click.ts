@@ -9,6 +9,7 @@ import {
     MRNotContains,
     Modifier,
     MWindow,
+    OpenLinkPluginITF,
 } from './types'
 import {
     genRandomStr,
@@ -53,7 +54,7 @@ const checkClickable = (el: Element): Clickable => {
     //  - links in editing mode
     if (el.classList.contains('cm-url')) {
         res.is_clickable = true
-        res.url = el.innerHTML.trim()
+        // res.url = // determined by `window._builtInOpen`
         res.modifier_rules = Platform.isMacOS
             ? [new MRContains([Modifier.Meta])]
             : [new MRContains([Modifier.Ctrl])]
@@ -75,7 +76,7 @@ const checkClickable = (el: Element): Clickable => {
 class LocalDocClickHandler {
     private _enabled: boolean
     private _handleAuxClick: boolean
-    constructor() {
+    constructor(public clickUilts: ClickUtils) {
         this._enabled = false
         this._handleAuxClick = false
     }
@@ -123,20 +124,21 @@ class LocalDocClickHandler {
         evt.preventDefault()
         let url: string = clickable.url
         if (win.oolwPendingUrls.length > 0) {
-            // win.oolwPendingUrls have higher priority
-            // e.g., live preview links
+            // win.oolwPendingUrls for getting correct urls from default open API
             url = win.oolwPendingUrls.pop()
         }
         if (url === null) {
             fire = false
         }
-        log('info', 'click event (LocalDocClickHandler)', {
-            is_aux: this.handleAuxClick,
-            clickable,
-            url,
-            modifiers,
-            btn: evt.button,
-        })
+        if (this.clickUilts._plugin.settings.enableLog) {
+            log('info', 'click event (LocalDocClickHandler)', {
+                is_aux: this.handleAuxClick,
+                clickable,
+                url,
+                modifiers,
+                btn: evt.button,
+            })
+        }
         if (!fire) {
             return false
         }
@@ -155,7 +157,6 @@ class LocalDocClickHandler {
 }
 
 class ClickUtils {
-    private _windowUtils: WindowUtils
     private _localHandlers: Record<
         string,
         {
@@ -163,15 +164,17 @@ class ClickUtils {
             auxclick: LocalDocClickHandler
         }
     >
-    constructor(windowUtils: WindowUtils) {
-        this._windowUtils = windowUtils
+    constructor(
+        public _plugin: OpenLinkPluginITF,
+        private _windowUtils: WindowUtils
+    ) {
         this._localHandlers = {}
     }
     initDocClickHandler(win: MWindow) {
         if (!this._localHandlers.hasOwnProperty(win.mid)) {
-            const clickHandler = new LocalDocClickHandler()
+            const clickHandler = new LocalDocClickHandler(this)
             clickHandler.enabled = true
-            const auxclickHandler = new LocalDocClickHandler()
+            const auxclickHandler = new LocalDocClickHandler(this)
             auxclickHandler.enabled = true
             auxclickHandler.handleAuxClick = true
             //
@@ -213,6 +216,13 @@ class ClickUtils {
             win.oolwCIDs = []
             win.oolwPendingUrls = []
             win.open = (url, target, feature) => {
+                if (this._plugin.settings.enableLog) {
+                    log('info', 'Obsidian.window._builtInOpen', {
+                        url,
+                        target,
+                        feature,
+                    })
+                }
                 const validUrl = getValidHttpURL(url)
                 if (validUrl === null) {
                     return win._builtInOpen(url, target, feature)
