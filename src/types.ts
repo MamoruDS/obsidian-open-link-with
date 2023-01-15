@@ -79,9 +79,10 @@ interface ModifierBinding {
     id: string
     browser?: string
     platform: Platform
-    modifier: ValidModifier
-    focusOnView: boolean
+    modifier: ValidModifier // TODO:
+    focusOnView?: boolean
     auxClickOnly: boolean
+    paneType?: PaneType
 }
 
 interface OpenLinkPluginITF extends Plugin {

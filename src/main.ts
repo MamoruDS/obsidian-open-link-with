@@ -3,6 +3,7 @@ import {
     debounce,
     Debouncer,
     Modal,
+    PaneType,
     Plugin,
     PluginSettingTab,
     Setting,
@@ -99,6 +100,7 @@ export default class OpenLinkPlugin
             } else if (shiftKey) {
                 modifier = 'shift'
             }
+            // const modifiers = getModifiersFromMouseEvt(evt)
             const url = el.getAttr('href')
             const matchedMB: ModifierBinding | undefined =
                 this.settings.modifierBindings.find((mb) => {
@@ -109,8 +111,10 @@ export default class OpenLinkPlugin
                     }
                 })
             const profileName = matchedMB?.browser ?? this.settings.selected
-            const popupWindow =
-                el.getAttr('target') === '_blank' ? true : false
+            const paneType =
+                el.getAttr('target') === '_blank'
+                    ? 'window' // higher priority
+                    : (el.getAttr('oolw-pane-type') as PaneType) || undefined
             const cmd = this._getOpenCMD(profileName)
             if (this.settings.enableLog) {
                 log('info', 'click event (extLinkClick)', {
@@ -128,8 +132,9 @@ export default class OpenLinkPlugin
                     mid: (evt.doc.win as MWindow).mid,
                     url,
                     profileName,
-                    popupWindow,
+                    paneType,
                     cmd,
+                    matchedBinding: matchedMB,
                 })
             }
             // right click trigger (windows only)
@@ -143,16 +148,16 @@ export default class OpenLinkPlugin
             if (profileName === BROWSER_IN_APP.val) {
                 evt.preventDefault()
                 this._viewmgr.createView(url, ViewMode.NEW, {
-                    popupWindow,
                     focus: matchedMB?.focusOnView,
+                    paneType,
                 })
                 return
             }
             if (profileName === BROWSER_IN_APP_LAST.val) {
                 evt.preventDefault()
                 this._viewmgr.createView(url, ViewMode.LAST, {
-                    popupWindow,
                     focus: matchedMB?.focusOnView,
+                    paneType,
                 })
                 return
             }
