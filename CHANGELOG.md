@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.9
+
+-   fixed: external-link click ignored under live preview mode
+-   added: more and native [pane-type](https://github.com/obsidianmd/obsidian-api/blob/38dd22168d2925086371bfc59e36fd9121527a39/obsidian.d.ts#L2591) support for creating views
+-   improved: using rule-based checker for `clickable` checking
+-   improved: in-app view opening now follows Obsidian's click behaviors
+
 ## 0.1.8
 
 -   fixed: multi-window handling was not correct [#16](https://github.com/mamoruds/obsidian-open-link-with/issues/16)
