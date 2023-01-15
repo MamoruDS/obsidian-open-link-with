@@ -1,27 +1,14 @@
-import { ItemView, WorkspaceLeaf } from 'obsidian'
+import { ItemView, PaneType, WorkspaceLeaf } from 'obsidian'
 import { BuiltinIcon } from './obsidian/types'
-import OpenLinkPlugin from './main'
+import { OpenLinkPluginITF, ViewMode, ViewRec } from './types'
 import { log } from './utils'
 
-enum ViewMode {
-    LAST,
-    NEW,
-}
-
-type ViewRec = {
-    leafId: string
-    url: string
-    mode: ViewMode
-}
-
 class InAppView extends ItemView {
-    icon: BuiltinIcon = 'link'
-    frame: HTMLIFrameElement
-    title: string
-    url: string
-    constructor(leaf: WorkspaceLeaf, url: string) {
+    public icon: BuiltinIcon = 'link'
+    public frame: HTMLIFrameElement
+    public title: string
+    constructor(leaf: WorkspaceLeaf, public url: string) {
         super(leaf)
-        this.url = url
         this.title = new URL(url).host
         // TODO: remove this after tab title issue is fixed
         this.leaf.setPinned(true)
@@ -39,17 +26,12 @@ class InAppView extends ItemView {
         return this.title
     }
     getViewType(): string {
-        return 'InAppView::getViewType()'
+        return 'OOLW::InAppView'
     }
 }
 
 class ViewMgr {
-    plugin: OpenLinkPlugin
-    constructor(plugin: OpenLinkPlugin) {
-        this.plugin = plugin
-    }
-    // private _getLeafID(leaf: WorkspaceLeaf): string {
-    // FIXME: missing property
+    constructor(public plugin: OpenLinkPluginITF) {}
     private _getLeafId(leaf: any): string {
         return leaf['id'] ?? ''
     }
@@ -76,33 +58,29 @@ class ViewMgr {
         mode: ViewMode,
         options: {
             focus?: boolean
-            popupWindow?: boolean // using popout-win will overwrite mode
+            paneType?: PaneType
         } = {}
     ): Promise<string> {
         const getNewLeafId = (): string => {
+            const newLeaf =
+                typeof options.paneType === 'undefined'
+                    ? false
+                    : options.paneType
             const leaf = this.plugin.app.workspace.getLeaf(
-                !(
-                    this.plugin.app.workspace.activeLeaf.view.getViewType() ===
-                    'empty'
-                )
+                newLeaf === false ? 'tab' : newLeaf // TODO: missing navigation; using tab for now
             )
             return this._getLeafId(leaf)
         }
         let id: string = undefined
-        if (options.popupWindow ?? false) {
-            mode = ViewMode.NEW
-            const leaf = this.plugin.app.workspace.openPopoutLeaf()
-            id = this._getLeafId(leaf)
+        // TODO: more robust open behaviors
+        if (typeof options.paneType !== 'undefined' || mode === ViewMode.NEW) {
+            id = getNewLeafId()
         } else {
-            if (mode === ViewMode.NEW) {
-                id = getNewLeafId()
-            } else {
-                const viewRec = this._validRecords()
-                let rec =
-                    viewRec.find(({ mode }) => mode === ViewMode.LAST) ??
-                    viewRec.find(({ mode }) => mode === ViewMode.NEW)
-                id = rec?.leafId ?? getNewLeafId()
-            }
+            const viewRec = this._validRecords()
+            let rec =
+                viewRec.find(({ mode }) => mode === ViewMode.LAST) ??
+                viewRec.find(({ mode }) => mode === ViewMode.NEW)
+            id = rec?.leafId ?? getNewLeafId()
         }
         return await this.updateView(id, url, mode, options?.focus)
     }
@@ -133,6 +111,7 @@ class ViewMgr {
                 })
             }
             await this.plugin.saveSettings()
+            // this.plugin.app.workspace.setActiveLeaf(leaf, { focus }) // TODO: option `focus` is not working (cliVer == 1.1.9)
             if (focus) {
                 this.plugin.app.workspace.setActiveLeaf(leaf)
             }

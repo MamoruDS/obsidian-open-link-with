@@ -1,8 +1,64 @@
-import { LogLevels, Modifier, MWindow, Platform, ValidModifier } from './types'
+import {
+    LogLevels,
+    Modifier,
+    MWindow,
+    Platform,
+    Rule as MR,
+    ValidModifier,
+    OpenLinkPluginITF,
+} from './types'
+
+class RulesChecker<R, V> {
+    constructor(private _rules: MR._Rule<R, V>[] = []) {}
+    addRule(rule: MR._Rule<R, V>) {
+        this._rules.push(rule)
+    }
+    check(input: R[], options: { breakOnFirstSuccess?: boolean } = {}): V[] {
+        const matched: V[] = []
+        for (const rule of this._rules) {
+            if (
+                (options?.breakOnFirstSuccess ?? false) &&
+                matched.length > 0
+            ) {
+                break
+            }
+            const { items } = rule
+            if (rule instanceof MR.Exact || rule instanceof MR.NotExact) {
+                let ok = false
+                if (items.length === input.length) {
+                    ok = items.every((item) => input.contains(item))
+                }
+                if (rule instanceof MR.Exact ? ok : !ok) {
+                    matched.push(rule.value)
+                }
+            } else if (
+                rule instanceof MR.Contains ||
+                rule instanceof MR.NotContains
+            ) {
+                let ok = false
+                if (items.length <= input.length) {
+                    ok = items.every((item) => input.contains(item))
+                }
+                if (rule instanceof MR.Contains ? ok : !ok) {
+                    matched.push(rule.value)
+                }
+            } else if (rule instanceof MR.Empty) {
+                if (input.length === 0) {
+                    matched.push(rule.value)
+                }
+            } else {
+                throw new TypeError(
+                    `invalid rule type: ${rule.constructor.name}`
+                )
+            }
+        }
+        return matched
+    }
+}
 
 class WindowUtils {
     private _windows: Record<string, MWindow>
-    constructor() {
+    constructor(private _plugin: OpenLinkPluginITF) {
         this._windows = {}
     }
     initWindow(win: MWindow) {
@@ -12,14 +68,18 @@ class WindowUtils {
     registerWindow(win: MWindow) {
         if (typeof win.mid === 'undefined') {
             win = this.initWindow(win)
-            log('info', 'window registered', { mid: win.mid, window: win })
+            if (this._plugin.settings.enableLog) {
+                log('info', 'window registered', { mid: win.mid, window: win })
+            }
             this._windows[win.mid] = win
         } else {
             // panic
-            // log('warn', 'existing window registered', {
-            //     mid: win.mid,
-            //     window: win,
-            // })
+            // if (this._plugin.settings.enableLog) {
+            //     log('warn', 'existing window registered', {
+            //         mid: win.mid,
+            //         window: win,
+            //     })
+            // }
         }
     }
     unregisterWindow(win: MWindow) {
@@ -90,11 +150,7 @@ const getValidHttpURL = (url?: string | URL): string | null => {
             : null
     } else {
         try {
-            if (['http:', 'https:'].indexOf(new URL(url).protocol) != -1) {
-                return url
-            } else {
-                return null
-            }
+            return getValidHttpURL(new URL(url))
         } catch (TypeError) {
             return null
         }
@@ -138,5 +194,6 @@ export {
     getValidHttpURL,
     intersection,
     log,
+    RulesChecker,
     WindowUtils,
 }

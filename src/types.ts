@@ -1,4 +1,26 @@
+import { PaneType, Plugin } from 'obsidian'
+
 type Optional<T> = T | undefined
+
+namespace Rule {
+    export class _Rule<R, V> {
+        constructor(public items: R[], public value: V) {}
+    }
+
+    export class Empty<R, V> extends _Rule<R, V> {
+        constructor(value: V) {
+            super([], value)
+        }
+    }
+
+    export class Exact<R, V> extends _Rule<R, V> {}
+
+    export class Contains<R, V> extends _Rule<R, V> {}
+
+    export class NotExact<R, V> extends _Rule<R, V> {}
+
+    export class NotContains<R, V> extends _Rule<R, V> {}
+}
 
 enum Platform {
     Unknown = 'unknown',
@@ -20,6 +42,11 @@ enum MouseButton {
     Secondary,
     Fourth,
     Fifth,
+}
+
+enum ViewMode {
+    LAST,
+    NEW,
 }
 
 interface BrowserOptions {
@@ -52,14 +79,39 @@ interface ModifierBinding {
     id: string
     browser?: string
     platform: Platform
-    modifier: ValidModifier
-    focusOnView: boolean
+    modifier: ValidModifier // TODO:
+    focusOnView?: boolean
     auxClickOnly: boolean
+    paneType?: PaneType
+}
+
+interface OpenLinkPluginITF extends Plugin {
+    settings: PluginSettings
+    profiles: ProfileMgrITF
+    loadSettings(): Promise<void>
+    saveSettings(): Promise<void>
+}
+
+interface PluginSettings {
+    selected: string
+    custom: Record<string, string[]>
+    modifierBindings: ModifierBinding[]
+    enableLog: boolean
+    timeout: number
+    inAppViewRec: ViewRec[]
 }
 
 interface ProfileDisplay {
     val: string
     display?: string
+}
+
+interface ProfileMgrITF {
+    loadValidPresetBrowsers: () => Promise<void>
+    getBrowsers: () => Browser[]
+    getBrowsersCMD: (
+        custom: Record<string, string[]>
+    ) => Record<string, string[]>
 }
 
 interface MWindow extends Window {
@@ -70,15 +122,21 @@ interface MWindow extends Window {
 }
 
 type Clickable = {
-    is_clickable: boolean
-    url: string | undefined
-    popout: boolean
-    require_modifier?: Modifier[]
+    is_clickable: boolean | null
+    url: string | null
+    paneType?: PaneType
+    modifier_rules?: Rule._Rule<Modifier, Optional<PaneType> | false>[]
 }
 
 type LogLevels = 'info' | 'warn' | 'error'
 
 type ValidModifier = 'none' | 'ctrl' | 'meta' | 'alt' | 'shift'
+
+type ViewRec = {
+    leafId: string
+    url: string
+    mode: ViewMode
+}
 
 export {
     Browser,
@@ -91,8 +149,14 @@ export {
     ModifierBinding,
     MouseButton,
     MWindow,
+    OpenLinkPluginITF,
     Optional,
     Platform,
+    PluginSettings,
     ProfileDisplay,
+    ProfileMgrITF,
+    Rule,
     ValidModifier,
+    ViewMode,
+    ViewRec,
 }

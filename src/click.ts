@@ -1,62 +1,84 @@
 import { Platform } from 'obsidian'
 
-import { Clickable, Modifier, MWindow } from './types'
+import {
+    Clickable,
+    Modifier,
+    MWindow,
+    OpenLinkPluginITF,
+    Rule as MR,
+} from './types'
 import {
     genRandomStr,
     getModifiersFromMouseEvt,
     getValidHttpURL,
     log,
+    RulesChecker,
     WindowUtils,
 } from './utils'
 
 const checkClickable = (el: Element): Clickable => {
     const res = {
         is_clickable: false,
-        url: undefined, // might be invalid; check before return
-        popout: false,
-        require_modifier: [],
+        url: null, // url is safe to be null when `oolwPendingUrls` is not empty
+        paneType: undefined,
+        modifier_rules: [],
     } as Clickable
-    // example of el with `external-link`:
-    //  - links in preview mode
+    const CTRL = Platform.isMacOS ? Modifier.Meta : Modifier.Ctrl
+    const ALT = Modifier.Alt
+    const SHIFT = Modifier.Shift
+    //  - links in read mode
     if (el.classList.contains('external-link')) {
         res.is_clickable = true
         res.url = el.getAttribute('href')
+        res.modifier_rules = [
+            new MR.Exact([CTRL], 'tab'),
+            new MR.Exact([CTRL, ALT], 'split'),
+            new MR.Exact([CTRL, SHIFT], 'tab'),
+            new MR.Exact([CTRL, ALT, SHIFT], 'window'),
+            new MR.Contains([], undefined), // fallback
+        ]
     }
-    // example of el with `clickable-icon`:
     //  -
     if (el.classList.contains('clickable-icon')) {
         // res.is_clickable = true
-        // res.popout = true
+        // res.paneType = 'window'
     }
-    // example of el with `cm-underline`:
-    //  -
+    //  - links in live preview mode
     if (el.classList.contains('cm-underline')) {
-        // res.is_clickable = true
+        res.is_clickable = null
+        // res.url = // determined by `window._builtInOpen`
+        res.modifier_rules = [
+            new MR.Empty(undefined),
+            new MR.Exact([CTRL], 'tab'),
+            new MR.Exact([CTRL, ALT], 'split'),
+            new MR.Exact([CTRL, SHIFT], 'tab'),
+            new MR.Exact([CTRL, ALT, SHIFT], 'window'),
+        ]
     }
-    // example of el with `cm-url`:
-    //  - links in editing mode
+    //  - links in edit mode
     if (el.classList.contains('cm-url')) {
-        res.is_clickable = true
-        res.url = el.innerHTML.trim()
-        res.require_modifier = Platform.isMacOS
-            ? [Modifier.Meta]
-            : [Modifier.Ctrl]
+        res.is_clickable = null
+        // res.url = // determined by `window._builtInOpen`
+        res.modifier_rules = [
+            new MR.Exact([CTRL], undefined),
+            new MR.Exact([CTRL, ALT], 'split'),
+            new MR.Exact([CTRL, SHIFT], 'tab'),
+            new MR.Exact([CTRL, ALT, SHIFT], 'window'),
+        ]
     }
-    if (!res.is_clickable && el.tagName === 'A') {
+    if (res.is_clickable === false && el.tagName === 'A') {
         let p = el
         while (p.tagName !== 'BODY') {
             if (p.classList.contains('community-modal-info')) {
                 res.is_clickable = true
                 res.url = el.getAttribute('href')
-                res.popout = el.getAttribute('target') === '_blank'
+                res.paneType =
+                    el.getAttribute('target') === '_blank'
+                        ? 'window'
+                        : res.paneType
             }
             p = p.parentElement
         }
-    }
-    //
-    const url = getValidHttpURL(res.url)
-    if (url === null) {
-        res.is_clickable = false
     }
     return res
 }
@@ -64,7 +86,7 @@ const checkClickable = (el: Element): Clickable => {
 class LocalDocClickHandler {
     private _enabled: boolean
     private _handleAuxClick: boolean
-    constructor() {
+    constructor(public clickUilts: ClickUtils) {
         this._enabled = false
         this._handleAuxClick = false
     }
@@ -95,35 +117,63 @@ class LocalDocClickHandler {
         const win = evt.doc.win as MWindow
         const modifiers = getModifiersFromMouseEvt(evt)
         const clickable = checkClickable(el)
-        if (!clickable.is_clickable) {
+        if (clickable.is_clickable === false) {
             return false
+        }
+        let { paneType } = clickable
+        let fire = true
+        if (clickable.modifier_rules.length > 0) {
+            const checker = new RulesChecker(clickable.modifier_rules)
+            const matched = checker.check(modifiers, {
+                breakOnFirstSuccess: true,
+            })
+            if (matched.length == 0) {
+                if (clickable.is_clickable) {
+                    //
+                } else {
+                    fire = false
+                }
+            } else if (matched[0] === false) {
+                fire = false
+            } else if (typeof matched[0] === 'undefined') {
+                paneType = undefined
+            } else {
+                paneType = matched[0]
+            }
         }
         // apply on middle click only
         if (this.handleAuxClick && evt.button === 2) {
-            return
+            fire = false
         }
         evt.preventDefault()
         let url: string = clickable.url
-        // win.oolwPendingUrls should have higher priority
         if (win.oolwPendingUrls.length > 0) {
-            url = win.oolwPendingUrls.shift()
+            // win.oolwPendingUrls for getting correct urls from default open API
+            url = win.oolwPendingUrls.pop()
+        }
+        if (url === null) {
+            fire = false
+        }
+        if (this.clickUilts._plugin.settings.enableLog) {
+            log('info', 'click event (LocalDocClickHandler)', {
+                is_aux: this.handleAuxClick,
+                clickable,
+                url,
+                modifiers,
+                btn: evt.button,
+            })
+        }
+        if (!fire) {
+            return false
         }
         const dummy = evt.doc.createElement('a')
         const cid = genRandomStr(4)
         dummy.setAttribute('href', url)
-        dummy.setAttribute('target', clickable.popout ? '_blank' : '_self')
+        dummy.setAttribute('oolw-pane-type', paneType || '')
         dummy.setAttribute('oolw-cid', cid)
         dummy.addClass('oolw-external-link-dummy')
         evt.doc.body.appendChild(dummy)
-
-        log('info', 'click event (LocalDocClickHandler)', {
-            is_aux: this.handleAuxClick,
-            clickable,
-            url,
-            dummy,
-            btn: evt.button,
-        })
-
+        //
         const e_cp = new MouseEvent(evt.type, evt)
         dummy.dispatchEvent(e_cp)
         dummy.remove()
@@ -131,7 +181,6 @@ class LocalDocClickHandler {
 }
 
 class ClickUtils {
-    private _windowUtils: WindowUtils
     private _localHandlers: Record<
         string,
         {
@@ -139,15 +188,17 @@ class ClickUtils {
             auxclick: LocalDocClickHandler
         }
     >
-    constructor(windowUtils: WindowUtils) {
-        this._windowUtils = windowUtils
+    constructor(
+        public _plugin: OpenLinkPluginITF,
+        private _windowUtils: WindowUtils
+    ) {
         this._localHandlers = {}
     }
     initDocClickHandler(win: MWindow) {
         if (!this._localHandlers.hasOwnProperty(win.mid)) {
-            const clickHandler = new LocalDocClickHandler()
+            const clickHandler = new LocalDocClickHandler(this)
             clickHandler.enabled = true
-            const auxclickHandler = new LocalDocClickHandler()
+            const auxclickHandler = new LocalDocClickHandler(this)
             auxclickHandler.enabled = true
             auxclickHandler.handleAuxClick = true
             //
@@ -189,11 +240,18 @@ class ClickUtils {
             win.oolwCIDs = []
             win.oolwPendingUrls = []
             win.open = (url, target, feature) => {
+                if (this._plugin.settings.enableLog) {
+                    log('info', 'Obsidian.window._builtInOpen', {
+                        url,
+                        target,
+                        feature,
+                    })
+                }
                 const validUrl = getValidHttpURL(url)
                 if (validUrl === null) {
                     return win._builtInOpen(url, target, feature)
                 } else {
-                    // win.oolwPendingUrls.push(validUrl)
+                    win.oolwPendingUrls.push(validUrl)
                     return win
                 }
             }

@@ -5,14 +5,14 @@ import {
     Browser as _Browser,
     BrowserProfile,
     BrowserProfileBase,
+    ProfileMgrITF,
 } from './types'
 
 class Browser implements _Browser {
-    name: string
-    profiles: Partial<Record<NodeJS.Platform, BrowserProfile>>
-    customCMD: string
+    public profiles: Partial<Record<NodeJS.Platform, BrowserProfile>>
+    public customCMD: string
     constructor(
-        name: string,
+        public name: string,
         defaultCMD?: Partial<Record<NodeJS.Platform, BrowserProfile>>
     ) {
         this.name = name
@@ -71,7 +71,7 @@ const getPresetBrowsers = (): Browser[] => {
     return presets
 }
 
-class ProfileMgr {
+class ProfileMgr implements ProfileMgrITF {
     private _preset_browser: Browser[]
     private _browsers: Browser[]
     constructor() {
