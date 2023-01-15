@@ -2,14 +2,10 @@ import { Platform } from 'obsidian'
 
 import {
     Clickable,
-    _MatchRule,
-    MRExact,
-    MRContains,
-    MRNotExact,
-    MRNotContains,
     Modifier,
     MWindow,
     OpenLinkPluginITF,
+    Rule as MR,
 } from './types'
 import {
     genRandomStr,
@@ -24,48 +20,62 @@ const checkClickable = (el: Element): Clickable => {
     const res = {
         is_clickable: false,
         url: null, // url is safe to be null when `oolwPendingUrls` is not empty
-        popout: false,
+        paneType: undefined,
         modifier_rules: [],
     } as Clickable
-    // example of el with `external-link`:
-    //  - links in preview mode
+    const CTRL = Platform.isMacOS ? Modifier.Meta : Modifier.Ctrl
+    const ALT = Modifier.Alt
+    const SHIFT = Modifier.Shift
+    //  - links in read mode
     if (el.classList.contains('external-link')) {
         res.is_clickable = true
         res.url = el.getAttribute('href')
+        res.modifier_rules = [
+            new MR.Exact([CTRL], 'tab'),
+            new MR.Exact([CTRL, ALT], 'split'),
+            new MR.Exact([CTRL, SHIFT], 'tab'),
+            new MR.Exact([CTRL, ALT, SHIFT], 'window'),
+            new MR.Contains([], undefined), // fallback
+        ]
     }
-    // example of el with `clickable-icon`:
     //  -
     if (el.classList.contains('clickable-icon')) {
         // res.is_clickable = true
-        // res.popout = true
+        // res.paneType = 'window'
     }
-    // example of el with `cm-underline`:
     //  - links in live preview mode
     if (el.classList.contains('cm-underline')) {
-        res.is_clickable = true
+        res.is_clickable = null
         // res.url = // determined by `window._builtInOpen`
         res.modifier_rules = [
-            new MRNotExact([Modifier.Alt]),
-            new MRNotExact([Modifier.Shift]),
-            new MRNotExact([Modifier.Alt, Modifier.Shift]),
+            new MR.Empty(undefined),
+            new MR.Exact([CTRL], 'tab'),
+            new MR.Exact([CTRL, ALT], 'split'),
+            new MR.Exact([CTRL, SHIFT], 'tab'),
+            new MR.Exact([CTRL, ALT, SHIFT], 'window'),
         ]
     }
-    // example of el with `cm-url`:
-    //  - links in editing mode
+    //  - links in edit mode
     if (el.classList.contains('cm-url')) {
-        res.is_clickable = true
+        res.is_clickable = null
         // res.url = // determined by `window._builtInOpen`
-        res.modifier_rules = Platform.isMacOS
-            ? [new MRContains([Modifier.Meta])]
-            : [new MRContains([Modifier.Ctrl])]
+        res.modifier_rules = [
+            new MR.Exact([CTRL], undefined),
+            new MR.Exact([CTRL, ALT], 'split'),
+            new MR.Exact([CTRL, SHIFT], 'tab'),
+            new MR.Exact([CTRL, ALT, SHIFT], 'window'),
+        ]
     }
-    if (!res.is_clickable && el.tagName === 'A') {
+    if (res.is_clickable === false && el.tagName === 'A') {
         let p = el
         while (p.tagName !== 'BODY') {
             if (p.classList.contains('community-modal-info')) {
                 res.is_clickable = true
                 res.url = el.getAttribute('href')
-                res.popout = el.getAttribute('target') === '_blank'
+                res.paneType =
+                    el.getAttribute('target') === '_blank'
+                        ? 'window'
+                        : res.paneType
             }
             p = p.parentElement
         }
@@ -107,14 +117,28 @@ class LocalDocClickHandler {
         const win = evt.doc.win as MWindow
         const modifiers = getModifiersFromMouseEvt(evt)
         const clickable = checkClickable(el)
-        if (!clickable.is_clickable) {
+        if (clickable.is_clickable === false) {
             return false
         }
-        let fire = true // mark click will be fired
+        let { paneType } = clickable
+        let fire = true
         if (clickable.modifier_rules.length > 0) {
-            const match = new RulesChecker(clickable.modifier_rules)
-            if (!match.check(modifiers)) {
+            const checker = new RulesChecker(clickable.modifier_rules)
+            const matched = checker.check(modifiers, {
+                breakOnFirstSuccess: true,
+            })
+            if (matched.length == 0) {
+                if (clickable.is_clickable) {
+                    //
+                } else {
+                    fire = false
+                }
+            } else if (matched[0] === false) {
                 fire = false
+            } else if (typeof matched[0] === 'undefined') {
+                paneType = undefined
+            } else {
+                paneType = matched[0]
             }
         }
         // apply on middle click only
@@ -145,7 +169,7 @@ class LocalDocClickHandler {
         const dummy = evt.doc.createElement('a')
         const cid = genRandomStr(4)
         dummy.setAttribute('href', url)
-        dummy.setAttribute('target', clickable.popout ? '_blank' : '_self')
+        dummy.setAttribute('oolw-pane-type', paneType || '')
         dummy.setAttribute('oolw-cid', cid)
         dummy.addClass('oolw-external-link-dummy')
         evt.doc.body.appendChild(dummy)
