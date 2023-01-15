@@ -379,7 +379,7 @@ class SettingTab extends PluginSettingTab {
                         platform: Platform.Unknown,
                         modifier: 'none',
                         focusOnView: true,
-                        auxClickOnly: true,
+                        auxClickOnly: false,
                     })
                     await this.plugin.saveSettings()
                     this._render()
