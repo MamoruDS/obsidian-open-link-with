@@ -1,6 +1,26 @@
-import { Plugin } from 'obsidian'
+import { PaneType, Plugin } from 'obsidian'
 
 type Optional<T> = T | undefined
+
+namespace Rule {
+    export class _Rule<R, V> {
+        constructor(public items: R[], public value: V) {}
+    }
+
+    export class Empty<R, V> extends _Rule<R, V> {
+        constructor(value: V) {
+            super([], value)
+        }
+    }
+
+    export class Exact<R, V> extends _Rule<R, V> {}
+
+    export class Contains<R, V> extends _Rule<R, V> {}
+
+    export class NotExact<R, V> extends _Rule<R, V> {}
+
+    export class NotContains<R, V> extends _Rule<R, V> {}
+}
 
 enum Platform {
     Unknown = 'unknown',
@@ -8,18 +28,6 @@ enum Platform {
     Mac = 'mac',
     Win = 'win',
 }
-
-class _MatchRule<R> {
-    constructor(public items: R[]) {}
-}
-
-class MRExact<R> extends _MatchRule<R> {}
-
-class MRContains<R> extends _MatchRule<R> {}
-
-class MRNotExact<R> extends _MatchRule<R> {}
-
-class MRNotContains<R> extends _MatchRule<R> {}
 
 enum Modifier {
     Alt = 'alt',
@@ -113,10 +121,10 @@ interface MWindow extends Window {
 }
 
 type Clickable = {
-    is_clickable: boolean
+    is_clickable: boolean | null
     url: string | null
-    popout: boolean
-    modifier_rules?: _MatchRule<Modifier>[]
+    paneType?: PaneType
+    modifier_rules?: Rule._Rule<Modifier, Optional<PaneType> | false>[]
 }
 
 type LogLevels = 'info' | 'warn' | 'error'
@@ -136,11 +144,6 @@ export {
     BrowserProfileBase,
     Clickable,
     LogLevels,
-    _MatchRule,
-    MRExact,
-    MRContains,
-    MRNotExact,
-    MRNotContains,
     Modifier,
     ModifierBinding,
     MouseButton,
@@ -151,6 +154,7 @@ export {
     PluginSettings,
     ProfileDisplay,
     ProfileMgrITF,
+    Rule,
     ValidModifier,
     ViewMode,
     ViewRec,

@@ -1,47 +1,58 @@
 import {
     LogLevels,
-    _MatchRule,
-    MRExact,
-    MRContains,
-    MRNotExact,
-    MRNotContains,
     Modifier,
     MWindow,
     Platform,
+    Rule as MR,
     ValidModifier,
     OpenLinkPluginITF,
 } from './types'
 
-class RulesChecker<R> {
-    private _rules: _MatchRule<R>[]
-    constructor(rules: _MatchRule<R>[] = []) {
-        this._rules = rules
-    }
-    addRule(rule: _MatchRule<R>) {
+class RulesChecker<R, V> {
+    constructor(private _rules: MR._Rule<R, V>[] = []) {}
+    addRule(rule: MR._Rule<R, V>) {
         this._rules.push(rule)
     }
-    check(input: R[]): boolean {
-        let success = false
+    check(input: R[], options: { breakOnFirstSuccess?: boolean } = {}): V[] {
+        const matched: V[] = []
         for (const rule of this._rules) {
-            const { items } = rule
-            if (rule instanceof MRExact || rule instanceof MRNotExact) {
-                let res = false
-                if (items.length === input.length) {
-                    res = items.every((item) => input.contains(item))
-                }
-                success = success || (rule instanceof MRExact ? res : !res)
-            } else if (
-                rule instanceof MRContains ||
-                rule instanceof MRNotContains
+            if (
+                (options?.breakOnFirstSuccess ?? false) &&
+                matched.length > 0
             ) {
-                let res = false
-                if (items.length <= input.length) {
-                    res = items.every((item) => input.contains(item))
+                break
+            }
+            const { items } = rule
+            if (rule instanceof MR.Exact || rule instanceof MR.NotExact) {
+                let ok = false
+                if (items.length === input.length) {
+                    ok = items.every((item) => input.contains(item))
                 }
-                success = success || (rule instanceof MRContains ? res : !res)
+                if (rule instanceof MR.Exact ? ok : !ok) {
+                    matched.push(rule.value)
+                }
+            } else if (
+                rule instanceof MR.Contains ||
+                rule instanceof MR.NotContains
+            ) {
+                let ok = false
+                if (items.length <= input.length) {
+                    ok = items.every((item) => input.contains(item))
+                }
+                if (rule instanceof MR.Contains ? ok : !ok) {
+                    matched.push(rule.value)
+                }
+            } else if (rule instanceof MR.Empty) {
+                if (input.length === 0) {
+                    matched.push(rule.value)
+                }
+            } else {
+                throw new TypeError(
+                    `invalid rule type: ${rule.constructor.name}`
+                )
             }
         }
-        return success
+        return matched
     }
 }
 
