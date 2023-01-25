@@ -66,16 +66,20 @@ const checkClickable = (el: Element): Clickable => {
             new MR.Exact([CTRL, ALT, SHIFT], 'window'),
         ]
     }
+    // - links in community plugins' readme
     if (res.is_clickable === false && el.tagName === 'A') {
         let p = el
         while (p.tagName !== 'BODY') {
-            if (p.classList.contains('community-modal-info')) {
+            if (p.classList.contains('internal-link')) {
+                break
+            } else if (p.classList.contains('community-modal-info')) {
                 res.is_clickable = true
                 res.url = el.getAttribute('href')
                 res.paneType =
                     el.getAttribute('target') === '_blank'
                         ? 'window'
                         : res.paneType
+                break
             }
             p = p.parentElement
         }
