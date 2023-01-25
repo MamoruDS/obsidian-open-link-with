@@ -154,6 +154,12 @@ class LocalDocClickHandler {
         if (win.oolwPendingUrls.length > 0) {
             // win.oolwPendingUrls for getting correct urls from default open API
             url = win.oolwPendingUrls.pop()
+        } else {
+            // for urls could be invalid (inner links)
+            if (url !== null && !getValidHttpURL(url)) {
+                fire = false
+                win._builtInOpen(url)
+            }
         }
         if (url === null) {
             fire = false
