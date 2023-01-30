@@ -121,11 +121,25 @@ class LocalDocClickHandler {
         const win = evt.doc.win as MWindow
         const modifiers = getModifiersFromMouseEvt(evt)
         const clickable = checkClickable(el)
-        if (clickable.is_clickable === false) {
+        let fire = true
+        let url: string = clickable.url
+        if (win.oolwPendingUrls.length > 0) {
+            // win.oolwPendingUrls for getting correct urls from default open API
+            url = win.oolwPendingUrls.pop()
+        } else {
+            // for urls could be invalid (inner links)
+            if (url !== null && !getValidHttpURL(url)) {
+                fire = false
+                win._builtInOpen(url)
+            }
+        }
+        if (clickable.is_clickable === false && url === null) {
             return false
         }
         let { paneType } = clickable
-        let fire = true
+        if (url === null) {
+            fire = false
+        }
         if (clickable.modifier_rules.length > 0) {
             const checker = new RulesChecker(clickable.modifier_rules)
             const matched = checker.check(modifiers, {
@@ -150,20 +164,6 @@ class LocalDocClickHandler {
             fire = false
         }
         evt.preventDefault()
-        let url: string = clickable.url
-        if (win.oolwPendingUrls.length > 0) {
-            // win.oolwPendingUrls for getting correct urls from default open API
-            url = win.oolwPendingUrls.pop()
-        } else {
-            // for urls could be invalid (inner links)
-            if (url !== null && !getValidHttpURL(url)) {
-                fire = false
-                win._builtInOpen(url)
-            }
-        }
-        if (url === null) {
-            fire = false
-        }
         if (this.clickUilts._plugin.settings.enableLog) {
             log('info', 'click event (LocalDocClickHandler)', {
                 is_aux: this.handleAuxClick,
