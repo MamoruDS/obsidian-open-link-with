@@ -17,8 +17,13 @@ class InAppView extends ItemView {
         }, 10)
     }
     async onOpen(): Promise<void> {
+        const frame_styles: string[] = [
+            'height: 100%',
+            'width: 100%',
+            'background-color: white', // for pages with no background
+        ]
         this.frame = document.createElement('iframe')
-        this.frame.setAttr('style', 'height: 100%; width:100%')
+        this.frame.setAttr('style', frame_styles.join('; '))
         this.frame.setAttr('src', this.url)
         this.containerEl.children[1].appendChild(this.frame)
     }

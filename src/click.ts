@@ -66,16 +66,20 @@ const checkClickable = (el: Element): Clickable => {
             new MR.Exact([CTRL, ALT, SHIFT], 'window'),
         ]
     }
+    // - links in community plugins' readme
     if (res.is_clickable === false && el.tagName === 'A') {
         let p = el
         while (p.tagName !== 'BODY') {
-            if (p.classList.contains('community-modal-info')) {
+            if (p.classList.contains('internal-link')) {
+                break
+            } else if (p.classList.contains('community-modal-info')) {
                 res.is_clickable = true
                 res.url = el.getAttribute('href')
                 res.paneType =
                     el.getAttribute('target') === '_blank'
                         ? 'window'
                         : res.paneType
+                break
             }
             p = p.parentElement
         }
@@ -117,11 +121,25 @@ class LocalDocClickHandler {
         const win = evt.doc.win as MWindow
         const modifiers = getModifiersFromMouseEvt(evt)
         const clickable = checkClickable(el)
-        if (clickable.is_clickable === false) {
+        let fire = true
+        let url: string = clickable.url
+        if (win.oolwPendingUrls.length > 0) {
+            // win.oolwPendingUrls for getting correct urls from default open API
+            url = win.oolwPendingUrls.pop()
+        } else {
+            // for urls could be invalid (inner links)
+            if (url !== null && !getValidHttpURL(url)) {
+                fire = false
+                win._builtInOpen(url)
+            }
+        }
+        if (clickable.is_clickable === false && url === null) {
             return false
         }
         let { paneType } = clickable
-        let fire = true
+        if (url === null) {
+            fire = false
+        }
         if (clickable.modifier_rules.length > 0) {
             const checker = new RulesChecker(clickable.modifier_rules)
             const matched = checker.check(modifiers, {
@@ -146,14 +164,6 @@ class LocalDocClickHandler {
             fire = false
         }
         evt.preventDefault()
-        let url: string = clickable.url
-        if (win.oolwPendingUrls.length > 0) {
-            // win.oolwPendingUrls for getting correct urls from default open API
-            url = win.oolwPendingUrls.pop()
-        }
-        if (url === null) {
-            fire = false
-        }
         if (this.clickUilts._plugin.settings.enableLog) {
             log('info', 'click event (LocalDocClickHandler)', {
                 is_aux: this.handleAuxClick,
