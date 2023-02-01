@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.10
+
+-   fixed: no longer ignores non-clickable elements with a valid pending URL [#20](https://github.com/mamoruds/obsidian-open-link-with/issues/20)
+-   fixed: blocks internal links under the .community-modal-info class [#19](https://github.com/mamoruds/obsidian-open-link-with/issues/20)
+-   improved: adds background to in-app view iframe [#21](https://github.com/mamoruds/obsidian-open-link-with/issues/21)
+
 ## 0.1.9
 
 -   fixed: external-link click ignored under live preview mode
